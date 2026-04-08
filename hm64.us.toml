@@ -1,0 +1,12 @@
+# Config file for Harvest Moon 64 Recompilation
+
+[input]
+entrypoint = 0x80025C00
+# Paths are relative to the location of this config file.
+elf_path = "hm64.us.elf"
+output_func_path = "RecompiledFuncs"
+
+[patches]
+ignored = [
+    "aspMainTextStart"
+]

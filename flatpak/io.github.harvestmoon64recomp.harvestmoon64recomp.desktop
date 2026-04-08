@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Harvest Moon 64: Recompiled
+Exec=/app/bin/HarvestMoon64Recompiled
+Type=Application
+Icon=io.github.harvestmoon64recomp.harvestmoon64recomp
+Categories=Game;
+Comment=Static recompilation of Harvest Moon 64 for PC.
+MimeType=x-scheme-handler/harvestmoon64recomp
