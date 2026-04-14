@@ -3,11 +3,13 @@
 [input]
 entrypoint = 0x80025C00
 # Paths are relative to the location of this config file.
-symbols_file_path = "HarvestMoon64RecompSyms/hm64.us.syms.toml"
+# symbols_file_path = "HarvestMoon64RecompSyms/hm64.us.syms.toml"
+elf_path = "hm64.us.elf"
 rom_file_path = "hm64.us.z64"
 output_func_path = "RecompiledFuncs"
 
 [patches]
+
 ignored = [
     "aspMainTextStart"
 ]

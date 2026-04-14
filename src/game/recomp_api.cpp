@@ -94,7 +94,11 @@ extern "C" void recomp_get_target_aspect_ratio(uint8_t* rdram, recomp_context* c
             _return(ctx, original);
             return;
         case ultramodern::renderer::AspectRatio::Expand:
-            _return(ctx, std::max(static_cast<float>(width) / height, original));
+            if (height > 0 && width > 0) {
+                _return(ctx, std::max(static_cast<float>(width) / height, original));
+            } else {
+                _return(ctx, original);
+            }
             return;
     }
 }
