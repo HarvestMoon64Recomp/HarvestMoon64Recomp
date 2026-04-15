@@ -66,8 +66,9 @@ jobs:
           path: hm64-secret
 
       - name: Prepare Build
-        run: cp -r hm64-secret/hm64.us.z64 ./
-             cp -r hm64-secret/hm64.us.elf ./
+        run: |
+          cp -r hm64-secret/hm64.us.z64 ./
+          cp -r hm64-secret/hm64.us.elf ./
 
       - name: Build N64Recomp & RSPRecomp
         run: |
@@ -154,8 +155,9 @@ jobs:
           path: hm64-secret
 
       - name: Prepare Build
-        run: cp -r hm64-secret/hm64.us.z64 ./
-             cp -r hm64-secret/hm64.us.elf ./
+        run: |
+          cp -r hm64-secret/hm64.us.z64 ./
+          cp -r hm64-secret/hm64.us.elf ./
 
       - name: Prepare Flatpak
         run: |
@@ -221,8 +223,9 @@ jobs:
           path: hm64-secret
 
       - name: Prepare Build
-        run: cp -r hm64-secret/hm64.us.z64 ./
-             cp -r hm64-secret/hm64.us.elf ./
+        run: |
+          cp -r hm64-secret/hm64.us.z64 ./
+          cp -r hm64-secret/hm64.us.elf ./
 
       - name: Build N64Recomp & RSPRecomp
         run: |
@@ -315,8 +318,9 @@ jobs:
           path: hm64-secret
 
       - name: Prepare Build
-        run: copy .\hm64-secret\hm64.us.z64 .\
-             copy .\hm64-secret\hm64.us.elf .\
+        run: |
+          copy .\hm64-secret\hm64.us.z64 .\
+          copy .\hm64-secret\hm64.us.elf .\
 
       - name: Build N64Recomp & RSPRecomp
         run: |
@@ -417,8 +421,9 @@ jobs:
           path: hm64-secret
 
       - name: Prepare Build
-        run: cp -r hm64-secret/hm64.us.z64 ./
-             cp -r hm64-secret/hm64.us.elf ./
+        run: |
+          cp -r hm64-secret/hm64.us.z64 ./
+          cp -r hm64-secret/hm64.us.elf ./
 
       - name: Build N64Recomp & RSPRecomp
         run: |
