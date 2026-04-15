@@ -1,17 +1,146 @@
 #include "patches.h"
+
+#include "common.h"
 #include "system/map.h"
+#include "system/globalSprites.h"
+#include "system/graphic.h"
+#include "system/math.h"
+#include "system/mapController.h"
+#include "system/sceneGraph.h"
+#include "mainproc.h"
+
+
+
+#define HM64_BIG_MAP_DL_SIZE 30000
+#define HM64_BIG_TILE_VTX_SIZE 16384
+
+static Gfx hm64_bigMapDisplayList[2][HM64_BIG_MAP_DL_SIZE];
+static Vtx hm64_bigTileVertices[2][HM64_BIG_TILE_VTX_SIZE];
+
+extern MainMap mainMap[MAX_MAPS];
+
 extern f32 frustumEdgeCoefficient0;
 extern f32 frustumEdgeCoefficient1;
 extern f32 frustumEdgeCoefficient2;
 extern f32 frustumEdgeCoefficient3;
+
+extern Gfx* renderTiles(Gfx* dl, MainMap* mainMap, u16 gridIndex, u8 textureIndex);
+
+extern u8 gridPositionToX[1596];
+extern u8 gridPositionToZ[1596];
+
+extern volatile u32 gGraphicsBufferIndex;
+
+extern Gfx groundObjectBitmapsDisplayList[2][0x1000];
+
+
+
+extern Gfx* prepareTileTextures(Gfx* dl, MainMap* map, u8 textureIndex);
+extern void processMapAdditions(u16 mapIndex);
+extern void setupCoreMapObjectSprites(MainMap* map);
+extern void setupMapObjectSprites(MainMap* map);
+extern void setupWeatherSprites(MainMap* map);
+extern void processMapSceneNode(u16 mapIndex, Gfx* dlStartingPosition);
+extern void renderGroundObjects(MainMap* map);
+
+static inline s32 hm64_updateMapRGBA(u16 i) {
+    u16 count = 0;
+
+    if (mainMap[i].mapGlobals.currentRGBA.r < mainMap[i].mapGlobals.targetRGBA.r) {
+        mainMap[i].mapGlobals.currentRGBA.r += mainMap[i].mapGlobals.deltaRGBA.r;
+        if (mainMap[i].mapGlobals.targetRGBA.r <= mainMap[i].mapGlobals.currentRGBA.r) {
+            mainMap[i].mapGlobals.currentRGBA.r = mainMap[i].mapGlobals.targetRGBA.r;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.r > mainMap[i].mapGlobals.targetRGBA.r) {
+        mainMap[i].mapGlobals.currentRGBA.r -= mainMap[i].mapGlobals.deltaRGBA.r;
+        if (mainMap[i].mapGlobals.currentRGBA.r <= mainMap[i].mapGlobals.targetRGBA.r) {
+            mainMap[i].mapGlobals.currentRGBA.r = mainMap[i].mapGlobals.targetRGBA.r;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.g < mainMap[i].mapGlobals.targetRGBA.g) {
+        mainMap[i].mapGlobals.currentRGBA.g += mainMap[i].mapGlobals.deltaRGBA.g;
+        if (mainMap[i].mapGlobals.targetRGBA.g <= mainMap[i].mapGlobals.currentRGBA.g) {
+            mainMap[i].mapGlobals.currentRGBA.g = mainMap[i].mapGlobals.targetRGBA.g;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.g > mainMap[i].mapGlobals.targetRGBA.g) {
+        mainMap[i].mapGlobals.currentRGBA.g -= mainMap[i].mapGlobals.deltaRGBA.g;
+        if (mainMap[i].mapGlobals.currentRGBA.g <= mainMap[i].mapGlobals.targetRGBA.g) {
+            mainMap[i].mapGlobals.currentRGBA.g = mainMap[i].mapGlobals.targetRGBA.g;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.b < mainMap[i].mapGlobals.targetRGBA.b) {
+        mainMap[i].mapGlobals.currentRGBA.b += mainMap[i].mapGlobals.deltaRGBA.b;
+        if (mainMap[i].mapGlobals.targetRGBA.b <= mainMap[i].mapGlobals.currentRGBA.b) {
+            mainMap[i].mapGlobals.currentRGBA.b = mainMap[i].mapGlobals.targetRGBA.b;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.b > mainMap[i].mapGlobals.targetRGBA.b) {
+        mainMap[i].mapGlobals.currentRGBA.b -= mainMap[i].mapGlobals.deltaRGBA.b;
+        if (mainMap[i].mapGlobals.currentRGBA.b <= mainMap[i].mapGlobals.targetRGBA.b) {
+            mainMap[i].mapGlobals.currentRGBA.b = mainMap[i].mapGlobals.targetRGBA.b;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.a < mainMap[i].mapGlobals.targetRGBA.a) {
+        mainMap[i].mapGlobals.currentRGBA.a += mainMap[i].mapGlobals.deltaRGBA.a;
+        if (mainMap[i].mapGlobals.targetRGBA.a <= mainMap[i].mapGlobals.currentRGBA.a) {
+            mainMap[i].mapGlobals.currentRGBA.a = mainMap[i].mapGlobals.targetRGBA.a;
+        } else {
+            count += 1;
+        }
+    }
+
+    if (mainMap[i].mapGlobals.currentRGBA.a > mainMap[i].mapGlobals.targetRGBA.a) {
+        mainMap[i].mapGlobals.currentRGBA.a -= mainMap[i].mapGlobals.deltaRGBA.a;
+        if (mainMap[i].mapGlobals.currentRGBA.a <= mainMap[i].mapGlobals.targetRGBA.a) {
+            mainMap[i].mapGlobals.currentRGBA.a = mainMap[i].mapGlobals.targetRGBA.a;
+        } else {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+static inline void hm64_handleRotation(u16 i) {
+    mainMap[i].mapCameraView.rotation.x = 0.0f;
+    mainMap[i].mapCameraView.rotation.y = 360.0f - currentWorldRotationAngles.y;
+    mainMap[i].mapCameraView.rotation.z = 0.0f;
+
+    if (mainMap[i].mapCameraView.rotation.y < 0.0f) {
+        mainMap[i].mapCameraView.rotation.y += 360.0f;
+    }
+
+    if (mainMap[i].mapCameraView.rotation.y >= 360.0f) {
+        mainMap[i].mapCameraView.rotation.y -= 360.0f;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Optional: keep your widened tile visibility.
+   Remove this patch if you already have your own checkTileVisible.
+   -------------------------------------------------------------------------- */
 RECOMP_PATCH bool checkTileVisible(MainMap* map, u8 x, u8 z) {
-    f32 PAD;
-    u16 w = map->mapGrid.mapWidth;
-    u16 h = map->mapGrid.mapHeight;
-    u32 area = (u32) w * (u32) h;
-
-        PAD = 55.0f;
-
+    const f32 PAD = 10.0f;
 
     f32 t0 = ((map->mapCameraView.frustumCorner0.z * (map->mapCameraView.frustumCorner1.x - x)) +
               (map->mapCameraView.frustumCorner1.z * (x - map->mapCameraView.frustumCorner0.x))) +
@@ -29,275 +158,169 @@ RECOMP_PATCH bool checkTileVisible(MainMap* map, u8 x, u8 z) {
               (map->mapCameraView.frustumCorner0.z * (x - map->mapCameraView.frustumCorner3.x))) +
              (z * frustumEdgeCoefficient3);
 
-    return (t0 >= -1.0f - PAD && t1 >= -1.0f - PAD && t2 >= -1.0f - PAD && t3 >= -1.0f - PAD);
+    /*return (t0 >= -1.0f - PAD && t1 >= -1.0f - PAD && t2 >= -1.0f - PAD && t3 >= -1.0f - PAD);*/
+
+    // always render tiles
+    return TRUE;
 }
 
-#include "system/globalSprites.h"
-#include "system/graphic.h"
-#include "system/math.h"
-#include "system/mapController.h"
-#include "system/sceneGraph.h"
-#include "mainproc.h"
+RECOMP_PATCH u32 setTileVertices(MainMap* map, u16 tileIndex, f32 x, f32 y, f32 z) {
+    u8 count = 0;
+    u16 vtxNumber = map->mapState.startingVertex + map->mapState.renderedVertexCount;
+    s8* vtx = map->tiles[tileIndex].coordinates;
+    u16 needed = map->tiles[tileIndex].verticesPerTile;
 
-extern u8 gridIndexToTileIndexX[20 * 24];
-extern u8 gridIndexToTileIndexZ[20 * 24];
-extern Gfx groundObjectBitmapsDisplayList[2][0x1000];
-extern CoreMapObject coreMapObjects[0x100];
-extern BitmapObject bitmaps[];
+    if (!needed) {
+        return 0;
+    }
 
-extern Gfx* prepareGroundObjectBitmap(Gfx* dl, GroundObjectBitmap* sprite);
-extern Gfx* renderGroundObject(Gfx* dl, MainMap* map, GroundObjectBitmap* bitmap, u16 vtxIndex);
-extern f32 getTerrainHeightAtPosition(u16 mapIndex, f32 x, f32 z);
-extern void addGroundObjectToSceneGraph(MainMap* map, f32 x, f32 y, f32 z, f32 camX, f32 camZ, Gfx* dl);
-extern u16 setBitmap(u8* texturePtr, u16* palettePtr, u16 flags);
+    /* Refuse the tile if the whole thing won't fit. */
+    if ((u32) vtxNumber + needed > HM64_BIG_TILE_VTX_SIZE) {
+        return 0;
+    }
 
-extern void setupMapObjectSprites(MainMap* map);
-extern void setupWeatherSprites(MainMap* map);
-extern void processMapSceneNode(u16 mapIndex, Gfx* dl);
+    do {
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.ob[0] = *vtx++ + x;
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.ob[1] = *(u8*) vtx++ + y;
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.ob[2] = *vtx++ + z;
 
-RECOMP_PATCH void setupCoreMapObjectSprites(MainMap* map);
-RECOMP_PATCH void renderGroundObjects(MainMap* map);
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.cn[0] = map->mapGlobals.currentRGBA.r;
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.cn[1] = map->mapGlobals.currentRGBA.g;
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.cn[2] = map->mapGlobals.currentRGBA.b;
+        hm64_bigTileVertices[gGraphicsBufferIndex][vtxNumber].v.cn[3] = map->mapGlobals.currentRGBA.a;
 
-static inline u8* hm64_getTexturePtr(u8 spriteIndex, u32* textureIndex) {
-    return (u8*) textureIndex + textureIndex[spriteIndex];
+        vtxNumber++;
+        count++;
+    } while (count < needed);
+
+    return count;
 }
 
-static inline u16* hm64_getPalettePtr(u8 index, u32* paletteIndex) {
-    return (u16*) ((u8*) paletteIndex + paletteIndex[index]);
+RECOMP_PATCH Gfx* appendTileToDL(Gfx* dl, MainMap* map, u16 tileIndex, f32 x, f32 y, f32 z) {
+    u16 i;
+    u32 count;
+    Gfx* tempDl;
+
+    count = setTileVertices(map, tileIndex, x, y, z);
+
+    /* If we could not write the full vertex set, skip this tile entirely. */
+    if (count != map->tiles[tileIndex].verticesPerTile) {
+        return dl;
+    }
+
+    /*
+        Also guard against gSPVertex limits.
+        F3DEX expects at most 32 vertices loaded in one gSPVertex call.
+    */
+    if (map->tiles[tileIndex].verticesPerTile > 32) {
+        return dl;
+    }
+
+    gSPVertex(
+        dl++,
+        &hm64_bigTileVertices[gGraphicsBufferIndex][map->mapState.startingVertex + map->mapState.renderedVertexCount],
+        map->tiles[tileIndex].verticesPerTile, 0);
+
+    map->mapState.renderedVertexCount += count;
+
+    tempDl = &map->tileRenderingCommands[map->tiles[tileIndex].renderingCommandsOffset];
+    for (i = 0; i < map->tiles[tileIndex].triCount; i++) {
+        *dl++ = *tempDl++;
+    }
+
+    return dl;
 }
 
-static inline bool hm64_visBounds(s32 x, s32 z) {
-    return x >= 0 && x < 42 && z >= 0 && z < 38;
+extern Gfx* prepareTileTextures(Gfx* dl, MainMap* mainMap, u8 textureIndex);
+
+RECOMP_PATCH Gfx* renderTiles(Gfx* dl, MainMap* mainMap, u16 gridIndex, u8 textureIndex);
+
+RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex) {
+    u8 i;
+    u16 gridIndex;
+
+    map->mapState.renderedVertexCount = 0;
+    map->mapState.startingVertex = startingVertex;
+
+    gDPSetCombineMode(dl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
+    gDPSetRenderMode(dl++, G_RM_RA_ZB_OPA_SURF, G_RM_RA_ZB_OPA_SURF2);
+    gDPSetTextureFilter(dl++, G_TF_BILERP);
+
+
+    for (i = 0; i < MAX_TILE_TEXTURES + 1; i++) {
+        gridIndex = map->textureToFirstGrid[i];
+        if (gridIndex != 0xFFFF) {
+            dl = renderTiles(dl, map, gridIndex, i);
+        }
+    }
+
+    gSPEndDisplayList(dl++);
+    map->mapState.totalVertexCount = map->mapState.renderedVertexCount;
+
+    return dl;
 }
 
-RECOMP_PATCH void setupCoreMapObjectSprites(MainMap* map) {
-    Vec3f vec, vec2;
-    f32 coordinateX, coordinateY, coordinateZ;
-    f32 rotationX, rotationY, rotationZ;
-    f32 scaleX, scaleY;
-    f32 xPosition, yPosition, zPosition;
-    f32 tileOffsetX, tileOffsetZ;
-    f32 cameraWorldX, cameraWorldZ;
-    f32 mapWorldCenterX, mapWorldCenterZ;
-    u16 bitmapIndex;
-    u8* texturePtr;
-    u16* palettePtr;
-    u8 total;
-    u16 i, j, k;
+RECOMP_PATCH void updateMapGraphics(void) {
+    u16 startingCount = 0;
+    u16 i;
+    Gfx* dl = hm64_bigMapDisplayList[gGraphicsBufferIndex];
+    Gfx* dlStartingPosition;
+    u32 padding[4];
 
-    i = 0;
-    while (i < map->mapState.coreMapObjectsCount) {
-        j = 0;
-        k = map->coreMapObjectsMetadata[i].unk_0;
-        total = map->coreMapObjectsMetadata[i].repeatObjectCount;
+    for (i = 0; i < MAX_MAPS; i++) {
+        if ((mainMap[i].mapState.flags & MAP_ACTIVE) && (mainMap[i].mapState.flags & MAP_GROUND_OBJECTS_LOADED)) {
 
-        while (j < total) {
-            coordinateX = coreMapObjects[k].coordinates.x;
-            coordinateY = coreMapObjects[k].coordinates.y;
-            yPosition = coordinateY;
+            processMapAdditions(i);
 
-            mapWorldCenterX = (map->mapGrid.mapWidth * map->mapGrid.tileSizeX) / 2;
-            mapWorldCenterZ = (map->mapGrid.mapHeight * map->mapGrid.tileSizeZ) / 2;
-
-            coordinateZ = coreMapObjects[k].coordinates.z;
-
-            tileOffsetX = map->mapGrid.tileSizeX / 2;
-            tileOffsetZ = map->mapGrid.tileSizeZ / 2;
-
-            cameraWorldX = map->mapCameraView.cameraTileX * map->mapGrid.tileSizeX;
-            cameraWorldZ = map->mapCameraView.cameraTileZ * map->mapGrid.tileSizeZ;
-
-            xPosition = (coordinateX + mapWorldCenterX) - tileOffsetX - cameraWorldX;
-            zPosition = (coordinateZ + mapWorldCenterZ) - tileOffsetZ - cameraWorldZ;
-
-            xPosition += map->mapCameraView.viewOffset.x;
-            yPosition += map->mapCameraView.viewOffset.y;
-            zPosition += map->mapCameraView.viewOffset.z;
-
-            vec2.x = ((coordinateX - tileOffsetX) + map->mapState.mapOriginX) / map->mapGrid.tileSizeX;
-            vec2.y = 0;
-            vec2.z = ((coordinateZ - tileOffsetZ) + map->mapState.mapOriginZ) / map->mapGrid.tileSizeZ;
-            vec = vec2;
-
-            if (hm64_visBounds((s32) (u8) vec.x, (s32) (u8) vec.z)) {
-                texturePtr =
-                    hm64_getTexturePtr(map->coreMapObjectsMetadata[i].spriteIndex, map->coreMapObjectsTextures);
-                palettePtr =
-                    hm64_getPalettePtr(map->coreMapObjectsMetadata[i].spriteIndex, map->coreMapObjectsPalettes);
-
-                switch (coreMapObjects[k].flags & CORE_MAP_OBJECT_SPRITE_MODE_MASK) {
-                    case 0x0:
-                        scaleY = 1.0f;
-                        break;
-                    case 0x4:
-                        scaleY = 2.0f;
-                        break;
-                    case 0x8:
-                        scaleY = 4.0f;
-                        break;
-                    case 0xC:
-                        scaleY = 8.0f;
-                        break;
-                    default:
-                        scaleY = 1.0f;
-                        break;
-                }
-                scaleX = scaleY;
-
-                if (coreMapObjects[k].flags & CORE_MAP_OBJECT_APPLY_ROTATION) {
-                    rotationX = map->mapGlobals.rotation.x;
-                    rotationY = map->mapGlobals.rotation.y;
-                    rotationZ = map->mapGlobals.rotation.z;
-
-                    switch (coreMapObjects[k].flags & CORE_MAP_OBJECT_ROTATION_MODE_MASK) {
-                        case 0x70:
-                            rotationY = (s32) (rotationY + 45.0f) % 360;
-                            break;
-                        case 0x10:
-                            rotationY = (s32) (rotationY + 315.0f) % 360;
-                            break;
-                        case 0x20:
-                            rotationY = (s32) (rotationY + 270.0f) % 360;
-                            break;
-                        case 0x30:
-                            rotationY = (s32) (rotationY + 225.0f) % 360;
-                            break;
-                        case 0x40:
-                            rotationY = (s32) (rotationY + 180.0f) % 360;
-                            break;
-                        case 0x50:
-                            rotationY = (s32) (rotationY + 135.0f) % 360;
-                            break;
-                        case 0x60:
-                            rotationY = (s32) (rotationY + 90.0f) % 360;
-                            break;
-                        default:
-                            break;
-                    }
-                } else {
-                    rotationX = 0.0f;
-                    rotationY = 0.0f;
-                    rotationZ = 0.0f;
-                }
-
-                bitmapIndex =
-                    setBitmap(texturePtr, palettePtr, (0x8 | SCENE_NODE_UPDATE_SCALE | SCENE_NODE_UPDATE_ROTATION));
-
-                setBitmapViewSpacePosition(bitmapIndex, xPosition, yPosition, zPosition);
-                setBitmapRotation(bitmapIndex, rotationX, rotationY, rotationZ);
-                setBitmapScale(bitmapIndex, scaleX, scaleY, 1.0f);
-                setBitmapTriangleWinding(bitmapIndex, 0);
-                setBitmapAnchorAlignment(bitmapIndex, SPRITE_ANCHOR_CENTER, SPRITE_ANCHOR_NEGATIVE);
-                setBitmapAxisMapping(bitmapIndex, 2);
-
-                if (coreMapObjects[k].flags & CORE_MAP_OBJECT_ALPHA_BLEND) {
-                    setBitmapBlendMode(bitmapIndex, SPRITE_BLEND_ALPHA_DECAL_NO_Z);
-                } else {
-                    setBitmapBlendMode(bitmapIndex, SPRITE_BLEND_ALPHA_DECAL);
-                }
-
-                setBitmapRGBA(bitmapIndex, map->mapGlobals.currentRGBA.r, map->mapGlobals.currentRGBA.g,
-                              map->mapGlobals.currentRGBA.b, map->mapGlobals.currentRGBA.a);
-                setBitmapAnchor(bitmapIndex, 0, 0);
-
-                bitmaps[bitmapIndex].flags |= BITMAP_USE_BILINEAR_FILTERING;
+            if (hm64_updateMapRGBA(i) == 0) {
+                mainMap[i].mapState.flags |= MAP_RGBA_FINISHED;
+            } else {
+                mainMap[i].mapState.flags &= ~MAP_RGBA_FINISHED;
             }
 
-            asm("");
-            j++;
-            total = map->coreMapObjectsMetadata[i].repeatObjectCount;
-            k++;
-        }
+            if (mainMap[i].mapGlobals.rotation.x < 0.0f) {
+                mainMap[i].mapGlobals.rotation.x += 360.0f;
+            }
+            if (mainMap[i].mapGlobals.rotation.x >= 360.0f) {
+                mainMap[i].mapGlobals.rotation.x -= 360.0f;
+            }
 
-        i++;
-    }
-}
+            if (mainMap[i].mapGlobals.rotation.y < 0.0f) {
+                mainMap[i].mapGlobals.rotation.y += 360.0f;
+            }
+            if (mainMap[i].mapGlobals.rotation.y >= 360.0f) {
+                mainMap[i].mapGlobals.rotation.y -= 360.0f;
+            }
 
-RECOMP_PATCH void renderGroundObjects(MainMap* map) {
-    Gfx* dl;
-    Gfx* startingPositionDl;
-    u16 i, count, gridIndex;
-    u32 index;
-    s16 temp1, temp2;
-    f32 arr[8];
+            if (mainMap[i].mapGlobals.rotation.z < 0.0f) {
+                mainMap[i].mapGlobals.rotation.z += 360.0f;
+            }
+            if (mainMap[i].mapGlobals.rotation.z >= 360.0f) {
+                mainMap[i].mapGlobals.rotation.z -= 360.0f;
+            }
 
-    arr[6] = map->mapCameraView.cameraTileX * map->mapGrid.tileSizeX;
-    index = gGraphicsBufferIndex;
-    arr[7] = map->mapCameraView.cameraTileZ * map->mapGrid.tileSizeZ;
+            hm64_handleRotation(i);
 
-    temp1 = (-(map->mapGrid.mapWidth * map->mapGrid.tileSizeX) / 2) + (map->mapGrid.tileSizeX * map->groundObjects.x) -
-            (map->mapGrid.tileSizeX / 2);
+            dlStartingPosition = dl;
+            dl = buildMapDisplayList(dlStartingPosition, &mainMap[i], startingCount);
 
-    temp2 = (-(map->mapGrid.mapHeight * map->mapGrid.tileSizeZ) / 2) + (map->mapGrid.tileSizeZ * map->groundObjects.z) -
-            (map->mapGrid.tileSizeZ / 2);
+            setupCoreMapObjectSprites(&mainMap[i]);
+            setupMapObjectSprites(&mainMap[i]);
+            setupWeatherSprites(&mainMap[i]);
 
-    count = 0;
-    dl = groundObjectBitmapsDisplayList[index];
+            processMapSceneNode(i, dlStartingPosition);
+            renderGroundObjects(&mainMap[i]);
 
-    if (map->groundObjects.unk_12) {
-        for (i = 0; i < MAX_GROUND_OBJECTS; i++) {
-            if (map->groundObjects.spriteIndexToGrid[i] == 0xFFFF)
-                continue;
+            startingCount += mainMap[i].mapState.totalVertexCount;
 
-            startingPositionDl = dl;
-            dl = prepareGroundObjectBitmap(dl, &map->groundObjectBitmaps[i]);
-            gridIndex = map->groundObjects.spriteIndexToGrid[i];
+            if ((dl - hm64_bigMapDisplayList[gGraphicsBufferIndex]) >= (HM64_BIG_MAP_DL_SIZE - 16)) {
+                break;
+            }
 
-            do {
-                s32 vx = gridIndexToTileIndexX[gridIndex] + map->groundObjects.x;
-                s32 vz = gridIndexToTileIndexZ[gridIndex] + map->groundObjects.z;
-
-                if (hm64_visBounds(vx, vz)) {
-                    dl = renderGroundObject(dl, map, &map->groundObjectBitmaps[i], count);
-
-                    addGroundObjectToSceneGraph(
-                        map,
-                        temp1 + (gridIndexToTileIndexX[gridIndex] * 32) + map->groundObjectBitmaps[i].coordinates.x,
-                        map->groundObjects.unk_12 + map->groundObjectBitmaps[i].coordinates.y,
-                        temp2 + (gridIndexToTileIndexZ[gridIndex] * 32) + map->groundObjectBitmaps[i].coordinates.z,
-                        arr[6], arr[7], startingPositionDl);
-
-                    count++;
-                    startingPositionDl = dl;
-                }
-
-                gridIndex = map->groundObjects.nextGridToSpriteIndex[gridIndex];
-            } while (gridIndex != 0xFFFF);
-        }
-    } else {
-        for (i = 0; i < MAX_GROUND_OBJECTS; i++) {
-            if (map->groundObjects.spriteIndexToGrid[i] == 0xFFFF)
-                continue;
-
-            startingPositionDl = dl;
-            dl = prepareGroundObjectBitmap(dl, &map->groundObjectBitmaps[i]);
-            gridIndex = map->groundObjects.spriteIndexToGrid[i];
-
-            do {
-                s32 vx = gridIndexToTileIndexX[gridIndex] + map->groundObjects.x;
-                s32 vz = gridIndexToTileIndexZ[gridIndex] + map->groundObjects.z;
-
-                if (hm64_visBounds(vx, vz)) {
-                    dl = renderGroundObject(dl, map, &map->groundObjectBitmaps[i], count);
-
-                    arr[2] =
-                        temp1 + (gridIndexToTileIndexX[gridIndex] * 32) + map->groundObjectBitmaps[i].coordinates.x;
-                    arr[4] = temp2 + (gridIndexToTileIndexZ[gridIndex] * 32) +
-                             map->groundObjectBitmaps[i].coordinates.z - 4.0f;
-                    arr[3] = getTerrainHeightAtPosition(0, arr[2], arr[4]);
-
-                    addGroundObjectToSceneGraph(map, arr[2], arr[3], arr[4], arr[6], arr[7], startingPositionDl);
-
-                    count++;
-                    startingPositionDl = dl;
-                }
-
-                gridIndex = map->groundObjects.nextGridToSpriteIndex[gridIndex];
-            } while (gridIndex != 0xFFFF);
+            if (startingCount >= (HM64_BIG_TILE_VTX_SIZE - 64)) {
+                break;
+            }
         }
     }
 
-    if (dl - groundObjectBitmapsDisplayList[gGraphicsBufferIndex] >= 0x1000) {
-        return;
-    }
 }
