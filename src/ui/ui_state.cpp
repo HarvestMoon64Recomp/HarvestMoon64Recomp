@@ -216,13 +216,10 @@ public:
                 bool fallback_face;
             };
             FontFace font_faces[] = {
-                {"LatoLatin-Regular.ttf", false},
-                {"ChiaroNormal.otf", false},
-                {"ChiaroBold.otf", false},
-                {"LatoLatin-Italic.ttf", false},
-                {"LatoLatin-Bold.ttf", false},
-                {"LatoLatin-BoldItalic.ttf", false},
-                {"NotoEmoji-Regular.ttf", true},
+                { "Funhouse.ttf", false },   { "ChiaroNormal.otf", false },
+                { "ChiaroBold.otf", false }, { "Funhouse.ttf", false },
+                { "Funhouse.ttf", false },   { "Funhouse.ttf", false },
+                { "Funhouse.ttf", true },
                 {"promptfont/promptfont.ttf", false},
             };
 

@@ -42,28 +42,6 @@ extern OSMesgQueue gSIMessageQ;
 extern s8 gCurrControllerNum;
 extern OSPfs gPFS[];
 
-typedef struct ArwingInfoRecomp {
-    u8 rightWingState;
-    u8 leftWingState;
-    f32 upperRightFlapYrot;
-    f32 bottomRightFlapYrot;
-    f32 upperLeftFlapYrot;
-    f32 bottomLeftFlapYrot;
-    f32 laserGunsYpos;
-    f32 laserGunsXpos;
-    f32 wingsXrot;
-    f32 wingsYrot;
-    f32 wingsZrot;
-    f32 unk_28;
-    u8 drawFace;
-    f32 teamFaceXrot;
-    f32 teamFaceYrot;
-    f32 cockpitGlassXrot;
-    void* actorPtr;
-} ArwingInfoRecomp; // size = 0x40
-
-extern s32 gCamera1Skipped;
-
 #ifndef gEXFillRectangle
 #define gEXFillRectangle(cmd, lorigin, rorigin, ulx, uly, lrx, lry)                         \
     G_EX_COMMAND2(cmd, PARAM(RT64_EXTENDED_OPCODE, 8, 24) | PARAM(G_EX_FILLRECT_V1, 24, 0), \
@@ -143,13 +121,6 @@ void* memcpy2(void* dest, const void* src, size_t n);
         "\t.balign 8\n"                      \
         "\t.popsection\n");                  \
     extern u8 identifier[]
-
-// void View_ApplyInterpolate(View* view, s32 mask, bool reset_interpolation_state);
-
-// void set_camera_skipped(bool skipped);
-void clear_camera_skipped();
-float recomp_get_target_aspect_ratio(float);
-// bool camera_was_skipped();
 
 void recomp_crash(const char* err);
 

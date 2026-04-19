@@ -85,7 +85,7 @@ target_include_directories(RecompiledFuncs PRIVATE
 file(GLOB FUNC_C_SOURCES ${CMAKE_SOURCE_DIR}/RecompiledFuncs/*.c)
 file(GLOB FUNC_CXX_SOURCES ${CMAKE_SOURCE_DIR}/RecompiledFuncs/*.cpp)
 
-target_sources(RecompiledFuncs PRIVATE ${FUNC_C_SOURCES} ${FUNC_CXX_SOURCES})
+target_sources(RecompiledFuncs PRIVATE ${FUNC_C_SOURCES} ${FUNC_CXX_SOURCES} )
 
 # PatchesLib - Library containing the recompiled output for any custom function patches
 add_library(PatchesLib STATIC)
@@ -292,7 +292,7 @@ if (WIN32)
             LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 
-    target_sources(HarvestMoon64Recompiled PRIVATE ${CMAKE_SOURCE_DIR}/icons/app.rc)
+    target_sources(HarvestMoon64Recompiled PRIVATE ${CMAKE_SOURCE_DIR}/icons/app.rc )
     target_link_libraries(HarvestMoon64Recompiled PRIVATE SDL2 Winmm.lib)
 endif()
 

@@ -252,6 +252,133 @@ body, .config-debug__select-wrapper select, .config-debug__select-wrapper input,
 /*
 @include set-color(COLOR);
 */
+/* stylelint-disable color-no-hex, color-hex-length */
+h1 {
+  font-size: 68dp;
+  letter-spacing: 4.76dp;
+  line-height: 68dp;
+  font-style: normal;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 52dp;
+  letter-spacing: 3.64dp;
+  line-height: 52dp;
+  font-style: normal;
+  font-weight: 700;
+}
+
+h3, .tab {
+  font-size: 36dp;
+  letter-spacing: 2.52dp;
+  line-height: 36dp;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.label-lg, .menu-list-item__label, .button--large {
+  font-size: 36dp;
+  letter-spacing: 3.96dp;
+  line-height: 36dp;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.label-md, .config-debug-option__label, .button, .config-option__title, .config-option--hz .config-option__title, .config-group__title, .control-option__label {
+  font-size: 28dp;
+  letter-spacing: 3.08dp;
+  line-height: 28dp;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.label-sm, .config-debug__select-wrapper .config-debug__select-label, .subtitle-title__disclaimer, .config-option__range-label, .config-option-range__label, .config-option__radio-tabs .config-option__tab-label,
+.config-option__list .config-option__tab-label, .centered-page__controls > label {
+  font-size: 20dp;
+  letter-spacing: 2.8dp;
+  line-height: 20dp;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.config-option__details {
+  font-size: 18dp;
+  letter-spacing: 2.52dp;
+  line-height: 18dp;
+  font-style: normal;
+  font-weight: 400;
+}
+
+body, .config-debug__select-wrapper select, .config-debug__select-wrapper input, .config-description__contents, .config-option-dropdown__select, .config-option-dropdown__wrapper, .config-option-textfield__select, .config-option-textfield__wrapper, .config__wrapper p {
+  font-size: 20dp;
+  letter-spacing: 0dp;
+  line-height: 20dp;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.toggle__icon {
+  font-family: promptfont;
+  font-size: 56dp;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 56dp;
+}
+
+.prompt-font {
+  font-family: promptfont;
+  font-size: 40dp;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 40dp;
+}
+
+.prompt-font-sm, .input-viz__mappings div {
+  font-family: promptfont;
+  font-size: 32dp;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 32dp;
+}
+
+/*
+@include trans-colors;
+*/
+/*
+@include trans-colors-opa;
+*/
+/*
+@include trans-colors-svg;
+*/
+/*
+@include trans-colors-border;
+*/
+.nav-vert, .nav-dir, .nav-all, .config-debug__select-wrapper select selectbox option, .config-debug__select-wrapper select, .config-debug__select-wrapper input, .toggle, .subtitle-title:not(:disabled, [disabled]), .menu-list-item:not(:disabled, [disabled]), .icon-button:not([disabled]), .button:not([disabled]), .button, .config-option-dropdown__select selectbox option, .config-option-dropdown__wrapper selectbox option, .config-option-textfield__select selectbox option, .config-option-textfield__wrapper selectbox option, .config-option-dropdown__select, .config-option-dropdown__wrapper, .config-option-textfield__select, .config-option-textfield__wrapper, .config-option__radio-tabs input.radio,
+.config-option__list input.radio, .config-option__radio-tabs .config-option__checkbox,
+.config-option__list .config-option__checkbox, .tab, .control-option__binding:not([disabled]) {
+  nav-up: auto;
+  nav-down: auto;
+}
+
+.nav-horiz, .nav-dir, .nav-all, .config-debug__select-wrapper select selectbox option, .config-debug__select-wrapper select, .config-debug__select-wrapper input, .toggle, .subtitle-title:not(:disabled, [disabled]), .menu-list-item:not(:disabled, [disabled]), .icon-button:not([disabled]), .button:not([disabled]), .button, .config-option-dropdown__select selectbox option, .config-option-dropdown__wrapper selectbox option, .config-option-textfield__select selectbox option, .config-option-textfield__wrapper selectbox option, .config-option-dropdown__select, .config-option-dropdown__wrapper, .config-option-textfield__select, .config-option-textfield__wrapper, .config-option__radio-tabs input.radio,
+.config-option__list input.radio, .config-option__radio-tabs .config-option__checkbox,
+.config-option__list .config-option__checkbox, .tab, .control-option__binding:not([disabled]) {
+  nav-right: auto;
+  nav-left: auto;
+}
+
+.nav-foc, .nav-all, .config-debug__select-wrapper select selectbox option, .config-debug__select-wrapper select, .config-debug__select-wrapper input, .toggle, .subtitle-title:not(:disabled, [disabled]), .menu-list-item:not(:disabled, [disabled]), .icon-button:not([disabled]), .button:not([disabled]), .button, .config-option-dropdown__select selectbox option, .config-option-dropdown__wrapper selectbox option, .config-option-textfield__select selectbox option, .config-option-textfield__wrapper selectbox option, .config-option-dropdown__select, .config-option-dropdown__wrapper, .config-option-textfield__select, .config-option-textfield__wrapper, .config-option__radio-tabs input.radio,
+.config-option__list input.radio, .config-option__radio-tabs .config-option__checkbox,
+.config-option__list .config-option__checkbox, .tab, .control-option__binding:not([disabled]) {
+  focus: auto;
+  tab-index: auto;
+}
+
+/*
+@include set-color(COLOR);
+*/
 /* stylelint-disable color-no-hex */
 /* stylelint-disable selector-max-id */
 * {
@@ -266,7 +393,7 @@ hr {
 
 body {
   color: #fff;
-  font-family: "latolatin";
+  font-family: "Funhouse";
   font-size: 20dp;
   font-style: normal;
   font-weight: normal;
@@ -1914,10 +2041,12 @@ scrollbarhorizontal sliderbar {
 .icon-button--warning {
   border-color: rgba(233, 205, 53, 0.8);
   background-color: rgba(233, 205, 53, 0.05);
+  color: #CCCCCC;
 }
 .icon-button--warning:focus, .icon-button--warning:hover {
   border-color: #E9CD35;
   background-color: rgba(233, 205, 53, 0.3);
+  color: #F2F2F2;
 }
 .icon-button--warning:active {
   background-color: rgba(233, 205, 53, 0.2);
@@ -1961,14 +2090,13 @@ scrollbarhorizontal sliderbar {
 .launcher__background-wrapper {
   display: flex;
   position: absolute;
-  top: -55vw;
-  right: -100%;
-  bottom: -50vw;
-  left: -70vw;
+  top: 0vw;
+  right: 0%;
+  bottom: 0vw;
+  left: -52vw;
   align-items: center;
   justify-content: flex-start;
   transform: translateX(0dp);
-  animation: 25s cubic-out 1 slide-mm-bg-over;
 }
 
 @keyframes fade-mm-in {
@@ -1986,8 +2114,7 @@ scrollbarhorizontal sliderbar {
   left: 0;
   width: auto;
   height: 100%;
-  animation: 2.5s cubic-in-out 1 fade-mm-in;
-  opacity: 0.15;
+  opacity: 0.5;
 }
 
 .launcher__title-quadrant {
@@ -2453,7 +2580,7 @@ scrollbarhorizontal sliderbar {
 body {
   box-sizing: border-box;
   color: #F2F2F2;
-  font-family: "latolatin";
+  font-family: "Funhouse";
 }
 
 .rmlui-window {
