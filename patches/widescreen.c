@@ -158,9 +158,7 @@ RECOMP_PATCH bool checkTileVisible(MainMap* map, u8 x, u8 z) {
               (map->mapCameraView.frustumCorner0.z * (x - map->mapCameraView.frustumCorner3.x))) +
              (z * frustumEdgeCoefficient3);
 
-    /*return (t0 >= -1.0f - PAD && t1 >= -1.0f - PAD && t2 >= -1.0f - PAD && t3 >= -1.0f - PAD);*/
-
-    // always render tiles
+    (void)PAD;
     return TRUE;
 }
 
