@@ -2090,12 +2090,13 @@ scrollbarhorizontal sliderbar {
 .launcher__background-wrapper {
   display: flex;
   position: absolute;
-  top: 0vw;
-  right: 0%;
-  bottom: 0vw;
-  left: -52vw;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
+  overflow: hidden;
   transform: translateX(0dp);
 }
 
@@ -2110,11 +2111,22 @@ scrollbarhorizontal sliderbar {
 .launcher__background-mm {
   position: absolute;
   top: 0;
-  bottom: 0;
-  left: 0;
+  left: 50%;
   width: auto;
   height: 100%;
   opacity: 0.5;
+}
+
+.launcher__background-mm--center {
+  transform: translateX(-50%);
+}
+
+.launcher__background-mm--left {
+  transform: translateX(-150%);
+}
+
+.launcher__background-mm--right {
+  transform: translateX(50%);
 }
 
 .launcher__title-quadrant {

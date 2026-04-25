@@ -51,12 +51,13 @@
 .launcher__background-wrapper {
     display: flex;
     position: absolute;
-    top: -55vw;
-    right: -100%;
-    bottom: -50vw;
-    left: -70vw;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
+    overflow: hidden;
     transform: translateX(space(0));
     animation: 25s cubic-out 1 slide-mm-bg-over;
 }
@@ -74,12 +75,23 @@
 .launcher__background-mm {
     position: absolute;
     top: 0;
-    bottom: 0;
-    left: 0;
+    left: 50%;
     width: auto;
     height: 100%;
     animation: 2.5s cubic-in-out 1 fade-mm-in;
     opacity: 0.1;
+
+    &--center {
+        transform: translateX(-50%);
+    }
+
+    &--left {
+        transform: translateX(-150%);
+    }
+
+    &--right {
+        transform: translateX(50%);
+    }
 }
 
 .launcher__title-quadrant {
