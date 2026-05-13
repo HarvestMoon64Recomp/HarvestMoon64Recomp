@@ -39,8 +39,7 @@ void updateMessageBox(void);
 void updateDialogues(void);
 
 void update_intro_visual_scale(void);
-void update_intro_widescreen_scale(void);
-void update_title_screen_widescreen_tiles(void);
+void update_2d_widescreen_sprite_flags(void);
 
 RECOMP_PATCH void mainLoop(void) {
     stepMainLoop = FALSE;
@@ -83,8 +82,7 @@ RECOMP_PATCH void mainLoop(void) {
                 updateMapGraphics();
             }
             updateNumberSprites();
-            update_intro_widescreen_scale();
-            update_title_screen_widescreen_tiles();
+            update_2d_widescreen_sprite_flags();
             updateSprites();
             dmaSprites();
             updateBitmaps();

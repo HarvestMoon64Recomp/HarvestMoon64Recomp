@@ -60,19 +60,20 @@ void nuGfxTaskStart(Gfx* gfxList_ptr, u32 gfxListSize, u32 ucode, u32 flag);
 
 static Gfx combinedGfxList[2][0x2800];
 
-// Draw everything in a single task so present-early does not flicker.
+// @recomp Draw everything in a single task so present-early does not flicker.
 RECOMP_PATCH void drawFrame(void) {
     Gfx* dl;
 
     gfxTaskNo = 0;
     dl = combinedGfxList[gGraphicsBufferIndex];
+    gEXEnable(dl++);
 
     dl = initRcp(dl);
     dl = clearFramebuffer(dl);
 
     gSPDisplayList(dl++, OS_K0_TO_PHYSICAL(&viewportDL));
-    dl = setupCameraMatrices(dl, &gCamera, &sceneMatrices[gGraphicsBufferIndex]);
-    dl = renderSceneGraph(dl, &sceneMatrices[gGraphicsBufferIndex]);
+    dl = setupCameraMatrices(dl++, &gCamera, &sceneMatrices[gGraphicsBufferIndex]);
+    dl = renderSceneGraph(dl++, &sceneMatrices[gGraphicsBufferIndex]);
     gSPDisplayList(dl++, OS_K0_TO_PHYSICAL(&viewportDL));
 
     gDPFullSync(dl++);
