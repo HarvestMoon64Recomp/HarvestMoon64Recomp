@@ -6,7 +6,6 @@
 #define HM64_MESSAGE_BOX_SCREEN_WIDTH 320
 #define HM64_MESSAGE_BOX_SCREEN_HEIGHT 240
 #define HM64_MESSAGE_BOX_SCISSOR_BASE_PAD_X 4
-#define HM64_MESSAGE_BOX_SCISSOR_BASE_PAD_Y 2
 
 typedef struct {
     s32 ulx;
@@ -47,8 +46,8 @@ static s32 hm64_get_message_scissor_pad_x(const MessageBox* messageBox) {
 }
 
 static s32 hm64_get_message_scissor_pad_y(const MessageBox* messageBox) {
-    return HM64_MESSAGE_BOX_SCISSOR_BASE_PAD_Y + (messageBox->fontContext.characterCellHeight / 2) +
-           messageBox->lineSpacing;
+    (void) messageBox;
+    return 0;
 }
 
 static MessageScissorRect hm64_get_message_scissor_rect(MessageBox* messageBox) {
