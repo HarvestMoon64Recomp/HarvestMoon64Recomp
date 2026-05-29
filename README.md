@@ -32,11 +32,7 @@ _Special thanks to [Blaze](https://runblaze.dev) for their support of this proje
   * [High Framerate Support](#high-framerate-support)
   * [Widescreen and Ultrawide Support](#widescreen-and-ultrawide-support)
   * [Mod Support](#mod-support)
-  * [Dual Analog Camera](#dual-analog-camera)
-  * [Gyro Aim](#gyro-aim)
   * [Additional Control Options](#additional-control-options)
-  * [Autosaving](#autosaving)
-  * [Low Input Lag](#low-input-lag)
   * [Instant Load Times](#instant-load-times)
   * [Linux and Steam Deck Support](#linux-and-steam-deck-support)
 * [Planned Features](#planned-features)
@@ -75,31 +71,12 @@ Play at any framerate you want thanks to functionality provided by RT64! Game ob
 #### Widescreen and Ultrawide Support
 Any aspect ratio is supported, with most effects modded to work correctly in widescreen. The HUD can also be positioned at 16:9 when using ultrawide aspect ratios if preferred.
 
-**Note**: Some animation quirks can be seen at the edges of the screen in certain cutscenes when using very wide aspect ratios.
-
 #### Mod Support
 Install community made mods and texture packs! Mods can change any part of the game, including adding completely new features and content. You can install mods by simply dragging the mod files onto the game window before starting the game or by clicking the **Install Mods** button in the mod menu. Mods can be toggled in the mod menu, and some mods can be configured there as well.
 
 Many mods are available on the project's Thunderstore page: https://thunderstore.io/c/zelda-64-recompiled/. The Thunderstore mod manager/r2modman is not required or supported, so be sure to click the "Manual Download" button when downloading a mod instead of the "Install with Mod Manager" button.
 
 If you're interested in making mods for this project, check out [the mod template](https://github.com/HarvestMoon64Recomp/HM64RecompModTemplate) and [the modding documentation](https://hackmd.io/fMDiGEJ9TBSjomuZZOgzNg). If you're interested in making texture packs, check out [the RT64 documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
-
-#### Dual Analog Camera
-Play with a dual analog control layout like later entries in the series! When this option is enabled, the right stick will control the camera. You can still have the C-Buttons mapped to the right stick if you so wish, so long as you also map them to other buttons on the controller. The right stick C-button inputs will be "silenced", except when you take out the ocarina, so you can still play the ocarina with the right stick.
-
-#### Gyro Aim
-When playing with a supported controller, first-person items such as the bow can be aimed with your controller's gyro sensor. This includes (but is not limited to) controllers such as the Dualshock 4, Dualsense, Switch Pro, and most third party Switch controllers (such as the 8BitDo Pro 2 in Switch mode).
-
-**Note**: Gamepad mappers such as BetterJoy or DS4Windows may intercept gyro data and prevent the game from receiving it. Most controllers are natively supported, so turning gamepad mappers off is recommended if you want to use gyro.
-
-#### Additional Control Options
-Customize your experience by setting your stick deadzone to your liking, as well as adjusting the X and Y axis inversion for both aiming and the optional dual analog camera.
-
-#### Autosaving
-Never worry about losing progress if your power goes out thanks to autosaving! The autosave system is designed to respect Harvest Moon 64's original save system and maintain the intention of owl saves by triggering automatically and replacing the previous autosave or owl save. However, if you'd still rather play with the untouched save system, simply turn off autosaving in the ingame menu.
-
-#### Low Input Lag
-This project has been optimized to have as little input lag as possible, making the game feel more responsive than ever!
 
 #### Instant Load Times
 Saving and loading files, going from place to place, and pausing all happen in the blink of an eye thanks to the game running natively on modern hardware.
