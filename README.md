@@ -82,7 +82,7 @@ Install community made mods and texture packs! Mods can change any part of the g
 
 Many mods are available on the project's Thunderstore page: https://thunderstore.io/c/zelda-64-recompiled/. The Thunderstore mod manager/r2modman is not required or supported, so be sure to click the "Manual Download" button when downloading a mod instead of the "Install with Mod Manager" button.
 
-There will eventually be a modding template, but if you're interested in making texture packs, check out [the RT64 documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
+If you're interested in making mods for this project, check out [the mod template](https://github.com/HarvestMoon64Recomp/HM64RecompModTemplate) and [the modding documentation](https://hackmd.io/fMDiGEJ9TBSjomuZZOgzNg). If you're interested in making texture packs, check out [the RT64 documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
 
 #### Dual Analog Camera
 Play with a dual analog control layout like later entries in the series! When this option is enabled, the right stick will control the camera. You can still have the C-Buttons mapped to the right stick if you so wish, so long as you also map them to other buttons on the controller. The right stick C-button inputs will be "silenced", except when you take out the ocarina, so you can still play the ocarina with the right stick.
