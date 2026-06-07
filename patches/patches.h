@@ -124,6 +124,19 @@ extern OSPfs gPFS[];
                              G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_AUTO, edit,             \
                              G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP)
 
+// @recomp Skips BOTH per-vertex (vert) and per-tile texture-region (tile) interpolation while keeping
+// the transform (position/rotation/scale) interpolating. Used for the ground while a map addition that
+// changes tile geometry/topology is animating (the farm/barn shipping bin): its bounce frames swap
+// boxes of different vertex counts and different texture S/T rectangles, and RT64 tweens both by index,
+// distorting the geometry and scrolling the texture so the grass texels inside the tile bleed in
+// (flickering green at framerates above Original). Snapping vert+tile makes those cells behave exactly
+// like framerate=Original while the rest of the ground (steady, and the still camera) is unaffected.
+#define gEXMatrixGroupDecomposedVertsTilesSkipOrderAuto(cmd, id, push, proj, edit)                                \
+    gEXMatrixGroupDecomposed(cmd, id, push, proj, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,        \
+                             G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, \
+                             G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_ORDER_AUTO, edit,                    \
+                             G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP)
+
 int recomp_printf(const char* fmt, ...);
 float recomp_powf(float, float);
 f32 __sinf(f32);

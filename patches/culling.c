@@ -105,9 +105,25 @@ RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex)
     Gfx* dlEnd = &hm64_bigMapDisplayList[gGraphicsBufferIndex][HM64_BIG_MAP_DL_SIZE];
     u16 lastTexSlot = 0xFFFF;
     u32 gridIndex;
+    u16 additionIndex;
+    bool snapGround = FALSE;
 
     map->mapState.renderedVertexCount = 0;
     map->mapState.startingVertex = startingVertex;
+
+    // @recomp Detect a one-shot tile animation that's currently playing -- specifically the shipping bins. 
+    // The bins' "bounce" animation swaps their 2x2 footprints through boxes of different vertex
+    // counts AND different texture S/T rectangles each frame; RT64 interpolates both vertices
+    // and the texture region by index, distorting the box and scrolling the grass texels inside the tile
+    // into view -> flickering green at any framerate above Original. While this kind of animation is active,
+    // should snap the whole ground (skip vertex + tile interpolation).
+    for (additionIndex = 0; additionIndex < MAX_MAP_ADDITIONS; additionIndex++) {
+        u16 additionFlags = map->mapAdditions[additionIndex].flags;
+        if ((additionFlags & MAP_ADDITION_ACTIVE) && !(additionFlags & MAP_ADDITION_LOOPING)) {
+            snapGround = TRUE;
+            break;
+        }
+    }
 
     // @recomp Emit the map tiles in stable grid-scan order instead of texture-batched order. RT64
     // matches vertices for interpolation by their position in the vertex stream, so that order must be
@@ -118,7 +134,11 @@ RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex)
     // changes, so RT64 interpolates the ground correctly.
     //
     // The ground is opaque and Z-buffered, so draw order doesn't affect the image
-    gEXMatrixGroupDecomposedVertsOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+    if (snapGround) {
+        gEXMatrixGroupDecomposedVertsTilesSkipOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+    } else {
+        gEXMatrixGroupDecomposedVertsOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+    }
     dl += 2;
 
     gDPSetCombineMode(dl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
