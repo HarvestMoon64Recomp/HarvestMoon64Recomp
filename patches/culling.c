@@ -4,15 +4,17 @@
 #include "system/mapController.h"
 #include "system/sceneGraph.h"
 
-// @recomp disabling tile culling needs larger map DL and tile vertex buffers.
-#define HM64_BIG_MAP_DL_SIZE 30000
-#define HM64_BIG_TILE_VTX_SIZE 16384
+// @recomp Disabling tile culling makes every tile render each frame, and grid-scan emission (see
+// buildMapDisplayList) reloads textures more often than texture-batched emission, so these buffers
+// need headroom.
+#define HM64_BIG_MAP_DL_SIZE 64000
+#define HM64_BIG_TILE_VTX_SIZE 49152
 #define HM64_MAP_MATRIX_GROUP_ID_BASE 0x484D6400
 
 static Gfx hm64_bigMapDisplayList[2][HM64_BIG_MAP_DL_SIZE];
 static Vtx hm64_bigTileVertices[2][HM64_BIG_TILE_VTX_SIZE];
 
-extern Gfx* renderTiles(Gfx* dl, MainMap* mainMap, u16 gridIndex, u8 textureIndex);
+extern Gfx* prepareTileTextures(Gfx* dl, MainMap* map, u8 textureIndex);
 extern volatile u32 gGraphicsBufferIndex;
 extern void processMapAdditions(u16 mapIndex);
 extern void setupCoreMapObjectSprites(MainMap* map);
@@ -97,14 +99,25 @@ RECOMP_PATCH Gfx* appendTileToDL(Gfx* dl, MainMap* map, u16 tileIndex, f32 x, f3
 }
 
 RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex) {
-    u8 i;
-    u16 gridIndex;
-    u32 mapMatrixGroupId = HM64_MAP_MATRIX_GROUP_ID_BASE + (u32)(map - mainMap);
+    u32 mapIndex = (u32)(map - mainMap);
+    u32 mapMatrixGroupId = HM64_MAP_MATRIX_GROUP_ID_BASE + mapIndex;
+    u32 cellCount = (u32)map->mapGrid.mapWidth * (u32)map->mapGrid.mapHeight;
+    Gfx* dlEnd = &hm64_bigMapDisplayList[gGraphicsBufferIndex][HM64_BIG_MAP_DL_SIZE];
+    u16 lastTexSlot = 0xFFFF;
+    u32 gridIndex;
 
     map->mapState.renderedVertexCount = 0;
     map->mapState.startingVertex = startingVertex;
 
-    // @recomp group the map for RT64 interpolation.
+    // @recomp Emit the map tiles in stable grid-scan order instead of texture-batched order. RT64
+    // matches vertices for interpolation by their position in the vertex stream, so that order must be
+    // stable frame to frame. The original texture batching reorders the stream whenever a cell's
+    // texture group changes.
+    //
+    // Scanning the grid in a fixed order keeps every cell at the same stream position even as its tile
+    // changes, so RT64 interpolates the ground correctly.
+    //
+    // The ground is opaque and Z-buffered, so draw order doesn't affect the image
     gEXMatrixGroupDecomposedVertsOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     dl += 2;
 
@@ -112,11 +125,42 @@ RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex)
     gDPSetRenderMode(dl++, G_RM_RA_ZB_OPA_SURF, G_RM_RA_ZB_OPA_SURF2);
     gDPSetTextureFilter(dl++, G_TF_BILERP);
 
-    for (i = 0; i < MAX_TILE_TEXTURES + 1; i++) {
-        gridIndex = map->textureToFirstGrid[i];
-        if (gridIndex != 0xFFFF) {
-            dl = renderTiles(dl, map, gridIndex, i);
+    for (gridIndex = 0; gridIndex < cellCount; gridIndex++) {
+        u8 gx = (u8)(gridIndex % map->mapGrid.mapWidth);
+        u8 gz = (u8)(gridIndex / map->mapGrid.mapWidth);
+        u16 raw = map->mapGrid.gridToTileIndex[gridIndex];
+        u16 swapped = (u16)((raw >> 8) | (raw << 8)); // matches swap16TileIndex (big-endian tile value)
+        u16 tileIndex = (u16)(swapped - 1);
+        u8 textureIndex;
+        u16 texSlot;
+
+        // @recomp Guard against display-list overflow (the patched builder had no per-tile check).
+        if (dl + 64 >= dlEnd) {
+            break;
         }
+
+        if (swapped == 0) {
+            // @recomp Empty cell: nothing to draw. Empty cells are part of the static map layout, so
+            // skipping them keeps the stream order stable.
+            continue;
+        }
+
+        textureIndex = map->tiles[tileIndex].textureIndex;
+        texSlot = (textureIndex & 0x80) ? (u16)(textureIndex & 0x7F) : (u16)MAX_TILE_TEXTURES;
+
+        // @recomp Load the texture only when it changes along the scan; solid-colour tiles (slot
+        // MAX_TILE_TEXTURES) never load one and leave the currently loaded texture untouched.
+        if (texSlot != (u16)MAX_TILE_TEXTURES && texSlot != lastTexSlot) {
+            dl = prepareTileTextures(dl, map, (u8)texSlot);
+            lastTexSlot = texSlot;
+        }
+
+        dl = appendTileToDL(dl, map, tileIndex,
+                            (gx - map->mapCameraView.cameraTileX) * map->mapGrid.tileSizeX,
+                            map->tiles[tileIndex].yOffset,
+                            (gz - map->mapCameraView.cameraTileZ) * map->mapGrid.tileSizeZ);
+
+        map->visibilityGrid[gz][gx] = TRUE;
     }
 
     gEXPopMatrixGroup(dl++, G_MTX_MODELVIEW);
