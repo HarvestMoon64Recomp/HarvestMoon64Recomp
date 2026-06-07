@@ -112,6 +112,18 @@ extern OSPfs gPFS[];
                              G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_AUTO, edit,      \
                              G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP)
 
+// @recomp Same as VertsOrderAuto but skips per-vertex interpolation. The map ground bakes every
+// tile into one shared vertex pool whose ordering changes when map additions rebuild the
+// tile->texture grouping (setGridToTileTextureMappings). RT64 interpolates vertices by index, so a
+// reorder makes it tween vertices between unrelated tiles, producing ground stretching at framerates
+// above Original. Skipping vertex interpolation snaps tiles (console-accurate) while the map's
+// transform still interpolates smoothly.
+#define gEXMatrixGroupDecomposedVertsSkipOrderAuto(cmd, id, push, proj, edit)                                    \
+    gEXMatrixGroupDecomposed(cmd, id, push, proj, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,        \
+                             G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, \
+                             G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_AUTO, edit,             \
+                             G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP)
+
 int recomp_printf(const char* fmt, ...);
 float recomp_powf(float, float);
 f32 __sinf(f32);
