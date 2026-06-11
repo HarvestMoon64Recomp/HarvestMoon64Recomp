@@ -2121,14 +2121,6 @@ scrollbarhorizontal sliderbar {
   transform: translateX(-50%);
 }
 
-.launcher__background-mm--left {
-  transform: translateX(-150%);
-}
-
-.launcher__background-mm--right {
-  transform: translateX(50%);
-}
-
 .launcher__title-quadrant {
   flex: 1 1 auto;
   width: auto;

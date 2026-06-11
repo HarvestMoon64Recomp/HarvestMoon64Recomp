@@ -654,7 +654,7 @@ public:
                 out = new_options.rr_manual_value;
             },
             [](const Rml::Variant& in) {
-                new_options.rr_manual_value = in.Get<int>();
+                new_options.rr_manual_value = std::max(in.Get<int>(), 30);
                 graphics_model_handle.DirtyVariable("options_changed");
             });
         constructor.BindFunc("ds_option",

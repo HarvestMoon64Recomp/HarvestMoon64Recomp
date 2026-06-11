@@ -181,7 +181,7 @@
                                 data-event-focus="set_cur_config_index(4)"
                                 id="rr_manual_input"
                                 type="range"
-                                min="20"
+                                min="30"
                                 max="360"
                                 style="flex:1;margin: 0dp;nav-up:#rr_manual;nav-down:#msaa_none;"
                                 data-value="rr_manual_value"

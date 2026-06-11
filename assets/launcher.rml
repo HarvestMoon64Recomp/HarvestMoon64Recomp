@@ -15,9 +15,7 @@
 		<div id="window" data-model="launcher_model">
 			<div class="launcher">
 				<div class="launcher__background-wrapper">
-					<svg src="mm-clipped.svg" class="launcher__background-mm launcher__background-mm--left" />
 					<svg src="mm-clipped.svg" class="launcher__background-mm launcher__background-mm--center" />
-					<svg src="mm-clipped.svg" class="launcher__background-mm launcher__background-mm--right" />
 				</div>
 				<div class="launcher__vertical-split">
 					<div class="launcher__title-quadrant">

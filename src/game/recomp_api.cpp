@@ -66,9 +66,7 @@ extern "C" void recomp_powf(uint8_t* rdram, recomp_context* ctx) {
 }
 
 extern "C" void recomp_get_target_framerate(uint8_t* rdram, recomp_context* ctx) {
-    int frame_divisor = _arg<0, u32>(rdram, ctx);
-
-    _return(ctx, ultramodern::get_target_framerate(60 / frame_divisor));
+    _return(ctx, ultramodern::get_target_framerate(30));
 }
 
 extern "C" void recomp_get_window_resolution(uint8_t* rdram, recomp_context* ctx) {

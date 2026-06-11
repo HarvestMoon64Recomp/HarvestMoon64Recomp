@@ -26,12 +26,13 @@ constexpr std::u8string_view sound_filename = u8"sound.json";
 constexpr auto res_default            = ultramodern::renderer::Resolution::Auto;
 constexpr auto hr_default             = ultramodern::renderer::HUDRatioMode::Clamp16x9;
 constexpr auto api_default            = ultramodern::renderer::GraphicsApi::Auto;
-constexpr auto ar_default             = ultramodern::renderer::AspectRatio::Original;
+constexpr auto ar_default             = ultramodern::renderer::AspectRatio::Expand;
 constexpr auto msaa_default           = ultramodern::renderer::Antialiasing::MSAA2X;
-constexpr auto rr_default             = ultramodern::renderer::RefreshRate::Manual;
+constexpr auto rr_default             = ultramodern::renderer::RefreshRate::Display;
 constexpr auto hpfb_default           = ultramodern::renderer::HighPrecisionFramebuffer::Auto;
 constexpr int ds_default              = 1;
 constexpr int rr_manual_default       = 60;
+constexpr int rr_manual_minimum       = 30;
 constexpr bool developer_mode_default = true;
 
 static bool is_steam_deck = false;
@@ -115,7 +116,7 @@ namespace ultramodern {
         config.msaa_option      = from_or_default(j, "msaa_option",     msaa_default);
         config.rr_option        = from_or_default(j, "rr_option",       rr_default);
         config.hpfb_option      = from_or_default(j, "hpfb_option",     hpfb_default);
-        config.rr_manual_value  = from_or_default(j, "rr_manual_value", rr_manual_default);
+        config.rr_manual_value  = std::max(from_or_default(j, "rr_manual_value", rr_manual_default), rr_manual_minimum);
         config.developer_mode   = from_or_default(j, "developer_mode",  developer_mode_default);
     }
 }
