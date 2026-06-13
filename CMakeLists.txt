@@ -186,6 +186,7 @@ set (SOURCES
     ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_button.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_clickable.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_container.cpp
+    ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_dropdown.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_element.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_image.cpp
     ${CMAKE_SOURCE_DIR}/src/ui/elements/ui_label.cpp

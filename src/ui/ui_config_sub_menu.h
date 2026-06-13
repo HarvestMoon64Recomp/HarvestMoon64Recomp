@@ -5,6 +5,7 @@
 
 #include "elements/ui_button.h"
 #include "elements/ui_container.h"
+#include "elements/ui_dropdown.h"
 #include "elements/ui_label.h"
 #include "elements/ui_radio.h"
 #include "elements/ui_scroll_container.h"
@@ -73,7 +74,19 @@ protected:
     std::string_view get_type_name() override { return "ConfigOptionRadio"; }
 public:
     ConfigOptionRadio(Element *parent, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback);
-    Element* get_focus_element() override { return radio; }    
+    Element* get_focus_element() override { return radio; }
+};
+
+class ConfigOptionDropdown : public ConfigOptionElement {
+protected:
+    Dropdown *dropdown = nullptr;
+    std::function<void(const std::string &, uint32_t)> callback;
+
+    void index_changed(uint32_t index);
+    std::string_view get_type_name() override { return "ConfigOptionDropdown"; }
+public:
+    ConfigOptionDropdown(Element *parent, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback);
+    Element* get_focus_element() override { return dropdown; }
 };
 
 class ConfigSubMenu : public Element {
@@ -101,6 +114,7 @@ public:
     void add_slider_option(std::string_view id, std::string_view name, std::string_view description, double value, double min, double max, double step, bool percent, std::function<void(const std::string &, double)> callback);
     void add_text_option(std::string_view id, std::string_view name, std::string_view description, std::string_view value, std::function<void(const std::string &, const std::string &)> callback);
     void add_radio_option(std::string_view id, std::string_view name, std::string_view description, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback);
+    void add_dropdown_option(std::string_view id, std::string_view name, std::string_view description, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback);
 };
 
 class ElementConfigSubMenu : public Rml::Element {
