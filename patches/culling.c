@@ -98,42 +98,32 @@ RECOMP_PATCH Gfx* appendTileToDL(Gfx* dl, MainMap* map, u16 tileIndex, f32 x, f3
     return dl;
 }
 
+static bool has_active_one_shot_map_addition(MainMap* map) {
+    for (u16 i = 0; i < MAX_MAP_ADDITIONS; i++) {
+        u16 flags = map->mapAdditions[i].flags;
+        if ((flags & MAP_ADDITION_ACTIVE) && !(flags & MAP_ADDITION_LOOPING)) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex) {
     u32 mapIndex = (u32)(map - mainMap);
     u32 mapMatrixGroupId = HM64_MAP_MATRIX_GROUP_ID_BASE + mapIndex;
     u32 cellCount = (u32)map->mapGrid.mapWidth * (u32)map->mapGrid.mapHeight;
     Gfx* dlEnd = &hm64_bigMapDisplayList[gGraphicsBufferIndex][HM64_BIG_MAP_DL_SIZE];
-    u16 lastTexSlot = 0xFFFF;
     u32 gridIndex;
-    u16 additionIndex;
-    bool snapGround = FALSE;
+    u16 lastTexSlot = 0xFFFF;
+    bool snapGround;
 
     map->mapState.renderedVertexCount = 0;
     map->mapState.startingVertex = startingVertex;
 
-    // @recomp Detect a one-shot tile animation that's currently playing -- specifically the shipping bins. 
-    // The bins' "bounce" animation swaps their 2x2 footprints through boxes of different vertex
-    // counts AND different texture S/T rectangles each frame; RT64 interpolates both vertices
-    // and the texture region by index, distorting the box and scrolling the grass texels inside the tile
-    // into view -> flickering green at any framerate above Original. While this kind of animation is active,
-    // should snap the whole ground (skip vertex + tile interpolation).
-    for (additionIndex = 0; additionIndex < MAX_MAP_ADDITIONS; additionIndex++) {
-        u16 additionFlags = map->mapAdditions[additionIndex].flags;
-        if ((additionFlags & MAP_ADDITION_ACTIVE) && !(additionFlags & MAP_ADDITION_LOOPING)) {
-            snapGround = TRUE;
-            break;
-        }
-    }
+// @recomp Snap one-shot tile swaps
+    snapGround = has_active_one_shot_map_addition(map);
 
-    // @recomp Emit the map tiles in stable grid-scan order instead of texture-batched order. RT64
-    // matches vertices for interpolation by their position in the vertex stream, so that order must be
-    // stable frame to frame. The original texture batching reorders the stream whenever a cell's
-    // texture group changes.
-    //
-    // Scanning the grid in a fixed order keeps every cell at the same stream position even as its tile
-    // changes, so RT64 interpolates the ground correctly.
-    //
-    // The ground is opaque and Z-buffered, so draw order doesn't affect the image
     if (snapGround) {
         gEXMatrixGroupDecomposedVertsTilesSkipOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     } else {
@@ -175,11 +165,7 @@ RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex)
             lastTexSlot = texSlot;
         }
 
-        dl = appendTileToDL(dl, map, tileIndex,
-                            (gx - map->mapCameraView.cameraTileX) * map->mapGrid.tileSizeX,
-                            map->tiles[tileIndex].yOffset,
-                            (gz - map->mapCameraView.cameraTileZ) * map->mapGrid.tileSizeZ);
-
+        dl = appendTileToDL(dl, map, tileIndex, gx * map->mapGrid.tileSizeX, map->tiles[tileIndex].yOffset, gz * map->mapGrid.tileSizeZ);
         map->visibilityGrid[gz][gx] = TRUE;
     }
 
@@ -193,10 +179,9 @@ RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex)
 RECOMP_PATCH void processMapSceneNode(u16 mapIndex, Gfx* dl) {
     u16 temp = addSceneNode(dl, (0x8 | SCENE_NODE_UPDATE_ROTATION));
 
-    addSceneNodePosition(temp,
-                         mainMap[mapIndex].mapGlobals.translation.x + mainMap[mapIndex].mapCameraView.viewOffset.x,
+    addSceneNodePosition(temp, mainMap[mapIndex].mapGlobals.translation.x + mainMap[mapIndex].mapCameraView.viewOffset.x - (mainMap[mapIndex].mapCameraView.cameraTileX * mainMap[mapIndex].mapGrid.tileSizeX),
                          mainMap[mapIndex].mapGlobals.translation.y + mainMap[mapIndex].mapCameraView.viewOffset.y,
-                         mainMap[mapIndex].mapGlobals.translation.z + mainMap[mapIndex].mapCameraView.viewOffset.z);
+                         mainMap[mapIndex].mapGlobals.translation.z + mainMap[mapIndex].mapCameraView.viewOffset.z - (mainMap[mapIndex].mapCameraView.cameraTileZ * mainMap[mapIndex].mapGrid.tileSizeZ));
     addSceneNodeScaling(temp,
                         mainMap[mapIndex].mapGlobals.scale.x,
                         mainMap[mapIndex].mapGlobals.scale.y,
