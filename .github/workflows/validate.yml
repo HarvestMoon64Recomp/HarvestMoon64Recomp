@@ -277,7 +277,7 @@ jobs:
           path: HarvestMoon64Recompiled-*.AppImage
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     strategy:
       matrix:
         type: [Debug, RelWithDebInfo]
