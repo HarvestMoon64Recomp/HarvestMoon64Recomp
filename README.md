@@ -72,7 +72,7 @@ Any aspect ratio is supported, with most effects modded to work correctly in wid
 #### Mod Support
 Install community made mods and texture packs! Mods can change any part of the game, including adding completely new features and content. You can install mods by simply dragging the mod files onto the game window before starting the game or by clicking the **Install Mods** button in the mod menu. Mods can be toggled in the mod menu, and some mods can be configured there as well.
 
-Many mods are available on the project's Thunderstore page: https://thunderstore.io/c/zelda-64-recompiled/. The Thunderstore mod manager/r2modman is not required or supported, so be sure to click the "Manual Download" button when downloading a mod instead of the "Install with Mod Manager" button.
+Many mods are available on the project's Thunderstore page: https://thunderstore.io/c/harvest-moon-64-recompiled/. The Thunderstore mod manager/r2modman is not required or supported, so be sure to click the "Manual Download" button when downloading a mod instead of the "Install with Mod Manager" button.
 
 If you're interested in making mods for this project, check out [the mod template](https://github.com/HarvestMoon64Recomp/HM64RecompModTemplate) and [the modding documentation](https://hackmd.io/fMDiGEJ9TBSjomuZZOgzNg). If you're interested in making texture packs, check out [the RT64 documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
 
@@ -82,10 +82,7 @@ Saving and loading files, going from place to place, and pausing all happen in t
 #### Linux and Steam Deck Support
 A Linux binary as well as a Flatpak is available for playing on most up-to-date distros, including on the Steam Deck.
 
-To play on Steam Deck, extract the Linux build onto your deck. Then, in desktop mode, right click the Zelda64Recompiled executable file and select "Add to Steam". From there, you can return to Gaming mode and configure the controls as needed. See the [Steam Deck gyro aim FAQ section](#how-do-i-set-up-gyro-aiming-on-steam-deck) for more detailed instructions.
-
-## Planned Features
-* QOL features from Harvest Whisperer's decomp branch in the form of a mod
+To play on Steam Deck, extract the Linux build onto your deck. Then, in desktop mode, right click the HarvestMoon64Recompiled executable file and select "Add to Steam". From there, you can return to Gaming mode and configure the controls as needed.
 
 ## FAQ
 
@@ -114,7 +111,7 @@ Yes, if you place a file named `portable.txt` in the same folder as the executab
 * Overlays such as MSI Afterburner and other software such as Wallpaper Engine can cause performance issues with this project that prevent the game from rendering correctly. Disabling such software is recommended.
 
 ## Building
-Building is not required to play this project, as prebuilt binaries (which do not contain game assets) can be found in the [Releases](https://github.com/Mr-Wiseguy/Zelda64Recomp/releases) section. Instructions on how to build this project can be found in the [BUILDING.md](BUILDING.md) file.
+Building is not required to play this project, as prebuilt binaries (which do not contain game assets) can be found in the [Releases](https://github.com/HarvestMoon64Recomp/HarvestMoon64Recomp/releases/) section. Instructions on how to build this project can be found in the [BUILDING.md](BUILDING.md) file.
 
 ## Libraries Used and Projects Referenced
 * [N64Recomp](https://github.com/N64Recomp/N64Recomp) for allowing recompilation to be possible
