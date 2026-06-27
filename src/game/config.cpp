@@ -33,7 +33,7 @@ constexpr auto hpfb_default           = ultramodern::renderer::HighPrecisionFram
 constexpr int ds_default              = 1;
 constexpr int rr_manual_default       = 60;
 constexpr int rr_manual_minimum       = 30;
-constexpr bool developer_mode_default = true;
+constexpr bool developer_mode_default = false;
 
 static bool is_steam_deck = false;
 
