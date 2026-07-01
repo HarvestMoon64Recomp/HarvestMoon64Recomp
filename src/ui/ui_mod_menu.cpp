@@ -487,8 +487,19 @@ void ModMenu::mod_configure_requested() {
             switch (option.type) {
             case recomp::mods::ConfigOptionType::Enum: {
                 const recomp::mods::ConfigOptionEnum &option_enum = std::get<recomp::mods::ConfigOptionEnum>(option.variant);
-                config_sub_menu->add_radio_option(option.id, option.name, option.description, std::get<uint32_t>(config_value), option_enum.options,
-                    [this](const std::string &id, uint32_t value){ mod_enum_option_changed(id, value); });
+                size_t total_label_length = 0;
+                for (const std::string &enum_option : option_enum.options) {
+                    total_label_length += enum_option.size();
+                }
+                constexpr size_t enum_dropdown_label_length = 120;
+                if (total_label_length > enum_dropdown_label_length) {
+                    config_sub_menu->add_dropdown_option(option.id, option.name, option.description, std::get<uint32_t>(config_value), option_enum.options,
+                        [this](const std::string &id, uint32_t value){ mod_enum_option_changed(id, value); });
+                }
+                else {
+                    config_sub_menu->add_radio_option(option.id, option.name, option.description, std::get<uint32_t>(config_value), option_enum.options,
+                        [this](const std::string &id, uint32_t value){ mod_enum_option_changed(id, value); });
+                }
                 break;
             }
             case recomp::mods::ConfigOptionType::Number: {

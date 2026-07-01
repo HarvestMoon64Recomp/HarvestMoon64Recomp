@@ -126,6 +126,29 @@ ConfigOptionRadio::ConfigOptionRadio(Element *parent, uint32_t value, const std:
     }
 }
 
+// ConfigOptionDropdown
+
+void ConfigOptionDropdown::index_changed(uint32_t index) {
+    callback(option_id, index);
+}
+
+ConfigOptionDropdown::ConfigOptionDropdown(Element *parent, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback) : ConfigOptionElement(parent) {
+    this->callback = callback;
+
+    dropdown = get_current_context().create_element<Dropdown>(this);
+    dropdown->set_focus_callback([this](bool active) {
+        focus_callback(option_id, active);
+    });
+    dropdown->add_index_changed_callback([this](uint32_t index){ index_changed(index); });
+    for (std::string_view option : options) {
+        dropdown->add_option(option);
+    }
+
+    if (value < options.size()) {
+        dropdown->set_index(value);
+    }
+}
+
 // ConfigSubMenu
 
 void ConfigSubMenu::back_button_pressed() {
@@ -240,6 +263,11 @@ void ConfigSubMenu::add_text_option(std::string_view id, std::string_view name, 
 void ConfigSubMenu::add_radio_option(std::string_view id, std::string_view name, std::string_view description, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback) {
     ConfigOptionRadio *option_radio = get_current_context().create_element<ConfigOptionRadio>(config_scroll_container, value, options, callback);
     add_option(option_radio, id, name, description);
+}
+
+void ConfigSubMenu::add_dropdown_option(std::string_view id, std::string_view name, std::string_view description, uint32_t value, const std::vector<std::string> &options, std::function<void(const std::string &, uint32_t)> callback) {
+    ConfigOptionDropdown *option_dropdown = get_current_context().create_element<ConfigOptionDropdown>(config_scroll_container, value, options, callback);
+    add_option(option_dropdown, id, name, description);
 }
 
 // ElementConfigSubMenu
