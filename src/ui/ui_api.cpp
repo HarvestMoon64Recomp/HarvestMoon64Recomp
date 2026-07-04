@@ -927,7 +927,10 @@ void recompui_set_nav(uint8_t* rdram, recomp_context* ctx) {
 
 #define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
 
+extern "C" void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
+
 void recompui::register_ui_exports() {
+    REGISTER_FUNC(recomp_run_ui_callbacks);
     REGISTER_FUNC(recompui_create_context);
     REGISTER_FUNC(recompui_open_context);
     REGISTER_FUNC(recompui_close_context);
