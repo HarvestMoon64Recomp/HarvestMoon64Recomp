@@ -17,6 +17,8 @@
 #define HM64_CHECKERBOARD_BACKGROUND_SPRITE        0x80
 #define HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X     14.0f
 #define HM64_CORE_MAP_OBJECT_MATRIX_GROUP_ID_BASE  0x484D6F00
+#define HM64_ELLEN_DEATH_CUTSCENE                  416
+#define HM64_ELLEN_DEATH_WHITE_FADE_SPRITE         160
 
 static BitmapObject hm64_bitmaps[HM64_MAX_BITMAPS];
 static Gfx hm64_bigSpriteDisplayList[2][HM64_BIG_SPRITE_DL_SIZE];
@@ -26,6 +28,7 @@ static u32 hm64_bitmapMatrixGroupId[HM64_MAX_BITMAPS];
 static u8 hm64_bitmapNoInterpolate[HM64_MAX_BITMAPS];
 
 extern volatile u32 gGraphicsBufferIndex;
+extern volatile u16 gCutsceneIndex;
 extern u16 bitmapCounter;
 extern CoreMapObject coreMapObjects[0x100];
 extern void setBitmapMetadata(BitmapMetadata* ptr, u16* data);
@@ -284,6 +287,10 @@ RECOMP_PATCH void setBitmapFromSpriteObject(u16 spriteIndex, AnimationFrameMetad
 
         // @recomp don't interpolate bitmaps.
         hm64_bitmaps[bitmapIndex].flags |= (globalSprites[spriteIndex].stateFlags & HM64_WIDESCREEN_FLAGS);
+        if ((gCutsceneIndex == HM64_ELLEN_DEATH_CUTSCENE) &&
+            (spriteIndex == HM64_ELLEN_DEATH_WHITE_FADE_SPRITE)) {
+            hm64_bitmaps[bitmapIndex].flags |= HM64_WIDESCREEN_FULLSCREEN;
+        }
         hm64_bitmapWidescreenOverlapX[bitmapIndex] = (spriteIndex == HM64_CHECKERBOARD_BACKGROUND_SPRITE) ? HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X : 0.0f;
         hm64_bitmapNoInterpolate[bitmapIndex] = (spriteIndex == HM64_CHECKERBOARD_BACKGROUND_SPRITE);
         setBitmapViewSpacePosition(bitmapIndex, globalSprites[spriteIndex].viewSpacePosition.x, globalSprites[spriteIndex].viewSpacePosition.y, globalSprites[spriteIndex].viewSpacePosition.z);
