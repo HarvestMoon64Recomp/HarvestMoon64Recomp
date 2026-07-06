@@ -1,5 +1,4 @@
 name: validate
-
 on:
   workflow_call:
     inputs:
@@ -10,43 +9,48 @@ on:
       N64RECOMP_COMMIT:
         type: string
         required: false
-        default: '98bf104b1b5ed83126af8bcab0cc964782617dbf'
+        default: '2b6f05688de2abc7d86da5b4a89b84c2c6acbabe'
     secrets:
       HM64_SECRET_REPO:
         required: true
       HM64_SECRET_PAT:
         required: true
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        type: [Debug, Release]
-        os: [ubuntu-22.04]
-    name: ubuntu-22.04 (x64, ${{ matrix.type }}, Native, AppImage)
+        type: [ Debug, Release ]
+        os: [ ubuntu-22.04 ]
+    name: ubuntu-22.04 (x64, ${{ matrix.type }}, Native)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           submodules: recursive
-
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ matrix.os }}-z64re-ccache-${{ matrix.type }}-x64-${{ inputs.N64RECOMP_COMMIT }}
-
+      - name: Get extra dependencies
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.HM64_SECRET_REPO }}
+          token: ${{ secrets.HM64_SECRET_PAT }}
+          path: extra
       - name: Install Linux Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libsdl2-dev libgtk-3-dev lld llvm clang-15 libfuse2
+          sudo apt-get install -y ninja-build libgtk-3-dev lld llvm clang-15 libfuse2
 
+          # Install SDL2
           echo ::group::install SDL2
+
+          # Enable ccache
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
           wget https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.SDL2_VERSION }}/SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
@@ -57,19 +61,6 @@ jobs:
           sudo make install
           sudo cp -av /usr/local/lib/libSDL* /lib/x86_64-linux-gnu/
           echo ::endgroup::
-
-      - name: Get extra dependencies
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ secrets.HM64_SECRET_REPO }}
-          token: ${{ secrets.HM64_SECRET_PAT }}
-          path: hm64-secret
-
-      - name: Prepare Build
-        run: |
-          cp -r hm64-secret/hm64.us.z64 ./
-          cp -r hm64-secret/hm64.us.elf ./
-
       - name: Build N64Recomp & RSPRecomp
         run: |
           git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
@@ -77,58 +68,133 @@ jobs:
           git checkout ${{ inputs.N64RECOMP_COMMIT }}
           git submodule update --init --recursive
 
+          # enable ccache
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
+          # Build N64Recomp & RSPRecomp
           cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
           cmake --build cmake-build --config Release --target N64RecompCLI -j $(nproc)
           cmake --build cmake-build --config Release --target RSPRecomp -j $(nproc)
 
+          # Copy N64Recomp & RSPRecomp to root directory
           cp cmake-build/N64Recomp ..
           cp cmake-build/RSPRecomp ..
-
       - name: Run N64Recomp & RSPRecomp
         run: |
+          # Copy extra dependencies to root directory
+          cp extra/* .
+
           ./N64Recomp hm64.us.toml
           ./RSPRecomp n_aspMain.toml
-
-      - name: Build HarvestMoon64Recomp
-        run: |
+      - name: Build HarvestMoon64Recompiled
+        run: |-
+          # enable ccache
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
-          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build -DPATCHES_C_COMPILER=clang-15 -DPATCHES_LD=ld.lld-15
           cmake --build cmake-build --config ${{ matrix.type }} --target HarvestMoon64Recompiled -j $(nproc)
-
       - name: Prepare Archive
         run: |
           mv cmake-build/HarvestMoon64Recompiled HarvestMoon64Recompiled
-          rm -rf assets/scss
           tar -czf HarvestMoon64Recompiled.tar.gz HarvestMoon64Recompiled assets/ recompcontrollerdb.txt
-
-      - name: Archive HarvestMoon64Recomp
+      - name: Archive HarvestMoon64Recompiled
         uses: actions/upload-artifact@v4
         with:
           name: HarvestMoon64Recompiled-${{ runner.os }}-X64-${{ matrix.type }}
           path: HarvestMoon64Recompiled.tar.gz
+  build-linux-arm64:
+    runs-on: ubuntu-22.04-arm
+    strategy:
+      matrix:
+        type: [ Debug, Release ]
+        os: [ ubuntu-22.04 ]
+    name: ${{ matrix.os }} (arm64, ${{ matrix.type }}, Native)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          submodules: recursive
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-z64re-ccache-${{ matrix.type }}-arm64-${{ inputs.N64RECOMP_COMMIT }}
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev lld llvm clang-15 libfuse2
 
-      - name: Build AppImage
-        run: bash ./.github/linux/appimage.sh
+          # Install SDL2
+          echo ::group::install SDL2
 
-      - name: HarvestMoon64Recomp AppImage
+          # Enable ccache
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+
+          wget https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.SDL2_VERSION }}/SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
+          tar -xzf SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
+          cd SDL2-${{ inputs.SDL2_VERSION }}
+          ./configure
+          make -j 10
+          sudo make install
+          sudo cp -av /usr/local/lib/libSDL* /lib/aarch64-linux-gnu/
+          echo ::endgroup::
+      - name: Get extra dependencies
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.HM64_SECRET_REPO }}
+          token: ${{ secrets.HM64_SECRET_PAT }}
+          path: extra
+      - name: Build N64Recomp & RSPRecomp
+        run: |
+          git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
+          cd N64RecompSource
+          git checkout ${{ inputs.N64RECOMP_COMMIT }}
+          git submodule update --init --recursive
+
+          # enable ccache
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+
+          # Build N64Recomp & RSPRecomp
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config Release --target N64RecompCLI -j $(nproc)
+          cmake --build cmake-build --config Release --target RSPRecomp -j $(nproc)
+
+          # Copy N64Recomp & RSPRecomp to root directory
+          cp cmake-build/N64Recomp ..
+          cp cmake-build/RSPRecomp ..
+      - name: Run N64Recomp & RSPRecomp
+        run: |
+          # Copy extra dependencies to root directory
+          cp extra/* .
+
+          ./N64Recomp hm64.us.toml
+          ./RSPRecomp n_aspMain.toml
+      - name: Build HarvestMoon64Recompiled
+        run: |-
+          # enable ccache
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config ${{ matrix.type }} --target HarvestMoon64Recompiled -j $(nproc)
+      - name: Prepare Archive
+        run: |
+          mv cmake-build/HarvestMoon64Recompiled HarvestMoon64Recompiled
+          tar -czf HarvestMoon64Recompiled.tar.gz HarvestMoon64Recompiled assets/ recompcontrollerdb.txt
+      - name: Archive HarvestMoon64Recompiled
         uses: actions/upload-artifact@v4
         with:
-          name: HarvestMoon64Recompiled-AppImage-X64-${{ matrix.type }}
-          path: HarvestMoon64Recompiled-*.AppImage
-
+          name: HarvestMoon64Recompiled-${{ runner.os }}-ARM64-${{ matrix.type }}
+          path: HarvestMoon64Recompiled.tar.gz
   build-linux-flatpak:
     runs-on: ubuntu-latest
     env:
       FLATPAK_ID: io.github.harvestmoon64recomp.harvestmoon64recomp
-      FREEDESKTOP_VERSION: 23.08
-      LLVM_VERSION: 18
+      FREEDESKTOP_VERSION: 25.08
+      LLVM_VERSION: 20
     strategy:
       matrix:
-        type: [Debug, Release]
-        os: [ubuntu-latest]
+        type: [ Debug, Release ]
+        os: [ ubuntu-latest ]
     name: ${{ matrix.os }} (x64, ${{ matrix.type }}, Flatpak)
     steps:
       - name: Checkout
@@ -136,12 +202,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           submodules: recursive
-
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ matrix.os }}-z64re-ccache-${{ matrix.type }}-x64-${{ inputs.N64RECOMP_COMMIT }}
-
       - name: Install Linux Dependencies
         run: |
           sudo apt-get update
@@ -152,12 +216,7 @@ jobs:
         with:
           repository: ${{ secrets.HM64_SECRET_REPO }}
           token: ${{ secrets.HM64_SECRET_PAT }}
-          path: hm64-secret
-
-      - name: Prepare Build
-        run: |
-          cp -r hm64-secret/hm64.us.z64 ./
-          cp -r hm64-secret/hm64.us.elf ./
+          path: extra
 
       - name: Prepare Flatpak
         run: |
@@ -165,8 +224,9 @@ jobs:
           flatpak --user install -y flathub org.freedesktop.Sdk//${{ env.FREEDESKTOP_VERSION }}
           flatpak --user install -y flathub org.freedesktop.Sdk.Extension.llvm${{ env.LLVM_VERSION }}//${{ env.FREEDESKTOP_VERSION }}
 
-      - name: Build HarvestMoon64Recomp
-        run: |
+      - name: Build HarvestMoon64Recompiled
+        run: |-
+          cp extra/* .
           export CCACHE_DIR=/tmp/ccache
           git config --global protocol.file.allow always
           make -C patches CC=clang LD=ld.lld
@@ -178,109 +238,11 @@ jobs:
         with:
           name: HarvestMoon64Recompiled-Flatpak-X64-${{ matrix.type }}
           path: ./${{ env.FLATPAK_ID }}.flatpak
-
-  build-linux-arm64:
-    runs-on: ubuntu-22.04-arm
-    strategy:
-      matrix:
-        type: [Debug, Release]
-        os: [ubuntu-22.04]
-    name: ubuntu-22.04 (arm64, ${{ matrix.type }}, Native, AppImage)
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.ref }}
-          submodules: recursive
-
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ matrix.os }}-z64re-ccache-${{ matrix.type }}-arm64-${{ inputs.N64RECOMP_COMMIT }}
-
-      - name: Install Linux Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libsdl2-dev libgtk-3-dev lld llvm clang-15 libfuse2
-
-          echo ::group::install SDL2
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-
-          wget https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.SDL2_VERSION }}/SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
-          tar -xzf SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
-          cd SDL2-${{ inputs.SDL2_VERSION }}
-          ./configure
-          make -j 10
-          sudo make install
-          sudo cp -av /usr/local/lib/libSDL* /lib/aarch64-linux-gnu/
-          echo ::endgroup::
-
-      - name: Get extra dependencies
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ secrets.HM64_SECRET_REPO }}
-          token: ${{ secrets.HM64_SECRET_PAT }}
-          path: hm64-secret
-
-      - name: Prepare Build
-        run: |
-          cp -r hm64-secret/hm64.us.z64 ./
-          cp -r hm64-secret/hm64.us.elf ./
-
-      - name: Build N64Recomp & RSPRecomp
-        run: |
-          git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
-          cd N64RecompSource
-          git checkout ${{ inputs.N64RECOMP_COMMIT }}
-          git submodule update --init --recursive
-
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
-          cmake --build cmake-build --config Release --target N64RecompCLI -j $(nproc)
-          cmake --build cmake-build --config Release --target RSPRecomp -j $(nproc)
-
-          cp cmake-build/N64Recomp ..
-          cp cmake-build/RSPRecomp ..
-
-      - name: Run N64Recomp & RSPRecomp
-        run: |
-          ./N64Recomp hm64.us.toml
-          ./RSPRecomp n_aspMain.toml
-
-      - name: Build HarvestMoon64Recomp
-        run: |
-          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-
-          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
-          cmake --build cmake-build --config ${{ matrix.type }} --target HarvestMoon64Recompiled -j $(nproc)
-
-      - name: Prepare Archive
-        run: |
-          mv cmake-build/HarvestMoon64Recompiled HarvestMoon64Recompiled
-          rm -rf assets/scss
-          tar -czf HarvestMoon64Recompiled.tar.gz HarvestMoon64Recompiled assets/ recompcontrollerdb.txt
-
-      - name: Archive HarvestMoon64Recomp
-        uses: actions/upload-artifact@v4
-        with:
-          name: HarvestMoon64Recompiled-${{ runner.os }}-ARM64-${{ matrix.type }}
-          path: HarvestMoon64Recompiled.tar.gz
-
-      - name: Build AppImage
-        run: bash ./.github/linux/appimage.sh
-
-      - name: HarvestMoon64Recomp AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: HarvestMoon64Recompiled-AppImage-ARM64-${{ matrix.type }}
-          path: HarvestMoon64Recompiled-*.AppImage
-
   build-windows:
-    runs-on: windows-2022
+    runs-on: windows-latest
     strategy:
       matrix:
-        type: [Debug, RelWithDebInfo]
+        type: [ Debug, RelWithDebInfo ]
     name: windows (${{ matrix.type }})
     steps:
       - name: Checkout
@@ -288,17 +250,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           submodules: recursive
-
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ runner.os }}-z64re-ccache-${{ matrix.type }}
-
       - name: Install Windows Dependencies
         run: |
           choco install ninja
           Remove-Item -Path "C:\ProgramData\Chocolatey\bin\ccache.exe" -Force -ErrorAction SilentlyContinue
-
       - name: Download portable LLVM
         run: |
           $ProgressPreference = 'SilentlyContinue'
@@ -306,22 +265,14 @@ jobs:
           New-Item -ItemType Directory -Path portable-llvm > $null
           7z x LLVM.tar.xz
           7z x LLVM.tar -oportable-llvm
-
       - name: Configure Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
-
       - name: Get extra dependencies
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.HM64_SECRET_REPO }}
           token: ${{ secrets.HM64_SECRET_PAT }}
-          path: hm64-secret
-
-      - name: Prepare Build
-        run: |
-          copy .\hm64-secret\hm64.us.z64 .\
-          copy .\hm64-secret\hm64.us.elf .\
-
+          path: extra
       - name: Build N64Recomp & RSPRecomp
         run: |
           git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
@@ -329,6 +280,7 @@ jobs:
           git checkout ${{ inputs.N64RECOMP_COMMIT }}
           git submodule update --init --recursive
 
+          # enable ccache
           set $env:PATH="$env:USERPROFILE/.cargo/bin;$env:PATH"
           $cpuCores = (Get-CimInstance -ClassName Win32_Processor).NumberOfLogicalProcessors
 
@@ -336,26 +288,29 @@ jobs:
           cmake --build cmake-build --config Release --target N64RecompCLI -j $cpuCores
           cmake --build cmake-build --config Release --target RSPRecomp -j $cpuCores
 
+          # Copy N64Recomp & RSPRecomp to root directory
           cp cmake-build/N64Recomp.exe ..
           cp cmake-build/RSPRecomp.exe ..
-
       - name: Run N64Recomp & RSPRecomp
         run: |
-          ./N64Recomp.exe hm64.us.toml
-          ./RSPRecomp.exe n_aspMain.toml
+          # Copy extra dependencies to root directory
+          cp extra/* .
 
-      - name: Build HarvestMoon64Recomp
-        run: |
+          ./N64Recomp hm64.us.toml
+          ./RSPRecomp n_aspMain.toml
+      - name: Build HarvestMoon64Recompiled
+        run: |-
+          # enable ccache
           set $env:PATH="$env:USERPROFILE/.cargo/bin;$env:PATH"
           $cpuCores = (Get-CimInstance -ClassName Win32_Processor).NumberOfLogicalProcessors
 
+          # remove LLVM from PATH so it doesn't overshadow the one provided by VS
           $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -ne 'C:\Program Files\LLVM\bin' }) -join ';'
 
-          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_COMPILER=clang-cl -DCMAKE_MAKE_PROGRAM=ninja -DPATCHES_C_COMPILER="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\clang" -DPATCHES_LD="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\ld.lld" -G Ninja -S . -B cmake-build -DCMAKE_CXX_FLAGS="-Xclang -fexceptions -Xclang -fcxx-exceptions"
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_COMPILER=clang-cl -DCMAKE_MAKE_PROGRAM=ninja -DPATCHES_C_COMPILER="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\clang" -DPATCHES_LD="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\ld.lld" -G Ninja -S . -B cmake-build -DCMAKE_CXX_FLAGS="-Xclang -fexceptions -Xclang -fcxx-exceptions -D__PRFCHWINTRIN_H" -DCMAKE_C_FLAGS="-D__PRFCHWINTRIN_H"
           cmake --build cmake-build --config ${{ matrix.type }} --target HarvestMoon64Recompiled -j $cpuCores
         env:
           SDL2_VERSION: ${{ inputs.SDL2_VERSION }}
-
       - name: Prepare Archive
         run: |
           Move-Item -Path "cmake-build/HarvestMoon64Recompiled.exe" -Destination "HarvestMoon64Recompiled.exe"
@@ -363,9 +318,7 @@ jobs:
           Move-Item -Path "cmake-build/dxil.dll" -Destination "dxil.dll"
           Move-Item -Path "cmake-build/SDL2.dll" -Destination "SDL2.dll"
           Move-Item -Path "cmake-build/HarvestMoon64Recompiled.pdb" -Destination "HarvestMoon64Recompiled.pdb"
-          Remove-Item -Path "assets/scss" -Recurse -Force
-
-      - name: Archive HarvestMoon64Recomp
+      - name: Archive HarvestMoon64Recompiled
         uses: actions/upload-artifact@v4
         with:
           name: HarvestMoon64Recompiled-${{ runner.os }}-${{ matrix.type }}
@@ -376,19 +329,17 @@ jobs:
             SDL2.dll
             assets/
             recompcontrollerdb.txt
-
       - name: Archive Debug Files
         uses: actions/upload-artifact@v4
         with:
           name: HarvestMoon64Recompiled-PDB-${{ matrix.type }}
           path: |
             HarvestMoon64Recompiled.pdb
-
   build-macos:
     runs-on: macos-14
     strategy:
       matrix:
-        type: [Debug, Release]
+        type: [ Debug, Release ]
     name: macos (x64, arm64, ${{ matrix.type }})
     steps:
       - name: Checkout
@@ -396,36 +347,27 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           submodules: recursive
-
+      - name: Make ld64 executable
+        run: chmod +x .github/macos/ld64
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ runner.os }}-z64re-ccache-${{ matrix.type }}
-
       - name: Homebrew Setup
         run: |
           brew install ninja
           brew uninstall --ignore-dependencies libpng freetype
-          python3 -m pip install --user --break-system-packages macholib
-
       - name: MacPorts Setup
         uses: melusina-org/setup-macports@v1
-        id: macports
+        id: 'macports'
         with:
           parameters: '.github/macos/macports.yaml'
-
       - name: Get extra dependencies
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.HM64_SECRET_REPO }}
           token: ${{ secrets.HM64_SECRET_PAT }}
-          path: hm64-secret
-
-      - name: Prepare Build
-        run: |
-          cp -r hm64-secret/hm64.us.z64 ./
-          cp -r hm64-secret/hm64.us.elf ./
-
+          path: extra
       - name: Build N64Recomp & RSPRecomp
         run: |
           git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
@@ -433,36 +375,38 @@ jobs:
           git checkout ${{ inputs.N64RECOMP_COMMIT }}
           git submodule update --init --recursive
 
+          # enable ccache
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
+          # Build N64Recomp & RSPRecomp
           cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
           cmake --build cmake-build --config Release --target N64Recomp -j $(sysctl -n hw.ncpu)
           cmake --build cmake-build --config Release --target RSPRecomp -j $(sysctl -n hw.ncpu)
 
+          # Copy N64Recomp & RSPRecomp to root directory
           cp cmake-build/N64Recomp ..
           cp cmake-build/RSPRecomp ..
-
       - name: Run N64Recomp & RSPRecomp
         run: |
+          # Copy extra dependencies to root directory
+          cp extra/* .
+
           ./N64Recomp hm64.us.toml
           ./RSPRecomp n_aspMain.toml
-
-      - name: Build HarvestMoon64Recomp
-        run: |
+      - name: Build HarvestMoon64Recompiled
+        run: |-
+          # enable ccache
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          chmod +x .github/macos/ld .github/macos/ld64
 
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build \
-            -DPATCHES_LD=/opt/local/bin/ld.lld-mp-18 -DCMAKE_AR=/opt/local/bin/llvm-ar-mp-18 -DPATCHES_C_COMPILER=/opt/local/bin/clang-mp-18 \
-            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          -DPATCHES_LD=/opt/local/bin/ld.lld-mp-18 -DCMAKE_AR=/opt/local/bin/llvm-ar-mp-18 -DPATCHES_C_COMPILER=/opt/local/bin/clang-mp-18 \
+          -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
           cmake --build cmake-build --config ${{ matrix.type }} --target HarvestMoon64Recompiled -j $(sysctl -n hw.ncpu)
-
       - name: Prepare Archive
         run: |
           mv cmake-build/HarvestMoon64Recompiled.app HarvestMoon64Recompiled.app
           zip -r -y HarvestMoon64Recompiled.zip HarvestMoon64Recompiled.app
-
-      - name: Archive HarvestMoon64Recomp
+      - name: Archive HarvestMoon64Recompiled
         uses: actions/upload-artifact@v4
         with:
           name: HarvestMoon64Recompiled-${{ runner.os }}-${{ matrix.type }}

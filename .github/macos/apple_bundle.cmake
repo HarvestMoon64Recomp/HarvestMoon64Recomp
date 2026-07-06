@@ -5,7 +5,7 @@ set(ENTITLEMENTS_FILE ${CMAKE_SOURCE_DIR}/.github/macos/entitlements.plist)
 set_target_properties(HarvestMoon64Recompiled PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_BUNDLE_NAME "HarvestMoon64Recompiled"
-        MACOSX_BUNDLE_GUI_IDENTIFIER "com.github.HarvestMoon64recompiled"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.harvestmoon64recomp.harvestmoon64recomp"
         MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
         MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
@@ -15,7 +15,7 @@ set_target_properties(HarvestMoon64Recompiled PROPERTIES
 )
 
 # Create icon files for macOS bundle
-set(ICON_SOURCE ${CMAKE_SOURCE_DIR}/icons/512.png)
+set(ICON_SOURCE ${CMAKE_SOURCE_DIR}/icons/app.png)
 set(ICONSET_DIR ${CMAKE_BINARY_DIR}/AppIcon.iconset)
 set(ICNS_FILE ${CMAKE_BINARY_DIR}/resources/AppIcon.icns)
 
@@ -23,10 +23,17 @@ set(ICNS_FILE ${CMAKE_BINARY_DIR}/resources/AppIcon.icns)
 add_custom_command(
         OUTPUT ${ICONSET_DIR}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${ICONSET_DIR}
+        COMMAND sips -z 16 16 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_16x16.png
+        COMMAND sips -z 32 32 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_16x16@2x.png
+        COMMAND sips -z 32 32 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_32x32.png
+        COMMAND sips -z 64 64 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_32x32@2x.png
+        COMMAND sips -z 128 128 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_128x128.png
+        COMMAND sips -z 256 256 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_128x128@2x.png
+        COMMAND sips -z 256 256 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_256x256.png
+        COMMAND sips -z 512 512 ${ICON_SOURCE} --out ${ICONSET_DIR}/icon_256x256@2x.png
         COMMAND ${CMAKE_COMMAND} -E copy ${ICON_SOURCE} ${ICONSET_DIR}/icon_512x512.png
-        COMMAND ${CMAKE_COMMAND} -E copy ${ICON_SOURCE} ${ICONSET_DIR}/icon_512x512@2x.png
         COMMAND touch ${ICONSET_DIR}
-        COMMENT "Creating iconset directory and copying PNG file"
+        COMMENT "Creating iconset directory from app.png"
 )
 
 # Convert iconset to icns

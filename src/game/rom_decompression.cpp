@@ -1,55 +1,22 @@
+#include "harvestmoon64_game.h"
+
+void harvestmoon64::game_on_init(uint8_t* rdram, recomp_context* ctx) {
+    // User Task: Add rom decompression routine if it needs it. If the game doesn't need it, you can just leave this
+    // function empty.
+    (void)rdram;
+    (void)ctx;
+}
+
+// Banjo's example:
+/*
 #include <cassert>
 #include <cstring>
 #include <fstream>
 
-#include "zelda_game.h"
+#include "miniz.h"
 
-uint8_t read_bit_array(std::span<const uint8_t> arr, size_t index) {
-    uint8_t byte = arr[index / 8];
-    uint8_t bit_index = index % 8;
-    return (byte >> (7 - bit_index)) & 1;
-}
-
-void naive_copy(std::span<uint8_t> dst, std::span<const uint8_t> src) {
-    for (size_t i = 0; i < src.size(); i++) {
-        dst[i] = src[i];
-    }
-}
-
-void mio0_decompress(std::span<const uint8_t> input, std::span<uint8_t> output, uint32_t compressed_stream_offset, uint32_t uncompressed_stream_offset) {
-    std::span<const uint8_t> layout_bit_data = input.subspan(0x10); // Advance past the MIO0 header.
-    std::span<const uint8_t> compressed_data = input.subspan(compressed_stream_offset);
-    std::span<const uint8_t> uncompressed_data = input.subspan(uncompressed_stream_offset);
-    int32_t layout_bit_index = 0;
-
-    size_t compressed_input_pos = 0;
-    size_t uncompressed_input_pos = 0;
-    size_t output_pos = 0;
-
-    size_t input_size = input.size();
-    size_t output_size = output.size();
-
-    while (output_pos < output_size) {
-        uint8_t layout_bit = read_bit_array(layout_bit_data, layout_bit_index);
-        layout_bit_index++;
-
-        // Layout bit set means uncompressed byte.
-        if (layout_bit) { 
-            output[output_pos++] = uncompressed_data[uncompressed_input_pos++];
-        }
-        // Layout bit unset means compressed block.
-        else {
-            int32_t first_byte = compressed_data[compressed_input_pos++];
-            int32_t second_byte = compressed_data[compressed_input_pos++];
-            uint32_t bytes = first_byte << 8 | second_byte;
-            uint32_t offset = (bytes & 0x0FFF) + 1;
-            uint32_t length = ((bytes & 0xF000) >> 12) + 3;
-
-            naive_copy(output.subspan(output_pos, length), output.subspan(output_pos - offset, length));
-            output_pos += length;
-        }
-    }
-}
+#include "librecomp/game.hpp"
+#include "banjo_game.h"
 
 #ifdef _MSC_VER
 inline uint32_t byteswap(uint32_t val) {
@@ -61,112 +28,119 @@ constexpr uint32_t byteswap(uint32_t val) {
 }
 #endif
 
-// Produces a decompressed SF64 rom. This is only needed because the game has compressed code.
+size_t decompress_bkzip(mz_stream* stream, std::span<const uint8_t> compressed_rom, uint32_t start, uint32_t end,
+                        std::vector<uint8_t>& out, size_t out_offset) {
+    // Subtract 2 bytes of magic number and 4 bytes of size.
+    uint32_t compressed_data_start = start + 0x6;
+
+    uint8_t size0 = compressed_rom[start + 0x2 + 0x0];
+    uint8_t size1 = compressed_rom[start + 0x2 + 0x1];
+    uint8_t size2 = compressed_rom[start + 0x2 + 0x2];
+    uint8_t size3 = compressed_rom[start + 0x2 + 0x3];
+    size_t decompressed_size = (size0 << 24) | (size1 << 16) | (size2 << 8) | (size3 << 0);
+
+    if (out.size() < decompressed_size + out_offset) {
+        out.resize(decompressed_size + out_offset);
+    }
+
+    stream->avail_in = end - compressed_data_start;
+    stream->next_in = reinterpret_cast<const Bytef*>(compressed_rom.data() + compressed_data_start);
+
+    stream->avail_out = decompressed_size;
+    stream->next_out = reinterpret_cast<Bytef*>(out.data() + out_offset);
+
+    mz_inflate(stream, Z_NO_FLUSH);
+
+    mz_inflateReset(stream);
+
+    return decompressed_size;
+}
+
+// Produces a decompressed BK rom. This is only needed because the game has compressed code.
 // For other recomps using this repo as an example, you can omit the decompression routine and
 // set the corresponding fields in the GameEntry if the game doesn't have compressed code,
 // even if it does have compressed data.
-std::vector<uint8_t> zelda64::decompress_sf64(std::span<const uint8_t> compressed_rom) {
+std::vector<uint8_t> banjo::decompress_bk(std::span<const uint8_t> compressed_rom) {
     // Sanity check the rom size and header. These should already be correct from the runtime's check,
     // but it should prevent this file from accidentally being copied to another recomp.
-    if (compressed_rom.size() != 0xC00000) {
+    if (compressed_rom.size() != 0x1000000) {
         assert(false);
         return {};
     }
 
-    if (compressed_rom[0x3B] != 'N' || compressed_rom[0x3C] != 'F' || compressed_rom[0x3D] != 'X' || compressed_rom[0x3E] != 'E') {
+    if (compressed_rom[0x3B] != 'N' || compressed_rom[0x3C] != 'B' || compressed_rom[0x3D] != 'K' ||
+        compressed_rom[0x3E] != 'E') {
         assert(false);
         return {};
     }
 
-    struct DmaDataEntry {
-        uint32_t vrom_start;
-        uint32_t rom_start;
-        uint32_t rom_end;
-        uint32_t is_compressed;
-
-        void bswap() {
-            vrom_start = byteswap(vrom_start);
-            rom_start = byteswap(rom_start);
-            rom_end = byteswap(rom_end);
-            is_compressed = byteswap(is_compressed);
-        }
+    struct Overlay {
+        uint32_t text_start;
+        uint32_t data_start;
     };
 
-    DmaDataEntry cur_entry{};
-    size_t cur_entry_index = 0;
+    Overlay overlays[] = {
+        { .text_start = 0xF19250, .data_start = 0xF19250 + 0x1D09B },
+        { .text_start = 0xF37F90, .data_start = 0xF37F90 + 0x64B50 },
+        { .text_start = 0xFA3FD0, .data_start = 0xFA3FD0 + 0x1DC6 },
+        { .text_start = 0xFA5F50, .data_start = 0xFA5F50 + 0x2D96 },
+        { .text_start = 0xFA9150, .data_start = 0xFA9150 + 0x512E },
+        { .text_start = 0xFAE860, .data_start = 0xFAE860 + 0x328B },
+        { .text_start = 0xFB24A0, .data_start = 0xFB24A0 + 0x1E39 },
+        { .text_start = 0xFB44E0, .data_start = 0xFB44E0 + 0x5130 },
+        { .text_start = 0xFB9A30, .data_start = 0xFB9A30 + 0x4BB2 },
+        { .text_start = 0xFBEBE0, .data_start = 0xFBEBE0 + 0x540F },
+        { .text_start = 0xFC4810, .data_start = 0xFC4810 + 0x23FF },
+        { .text_start = 0xFC6F20, .data_start = 0xFC6F20 + 0x1BDC },
+        { .text_start = 0xFC9150, .data_start = 0xFC9150 + 0x6548 },
+        { .text_start = 0xFD0420, .data_start = 0xFD0420 + 0x5640 },
+        { .text_start = 0xFD6190, .data_start = 0xFD6190 + 0x416F },
+        { .text_start = 0xFDAA10, .data_start = 0xFDAA10 + 0xE },
+    };
+    const uint32_t overlays_end = 0xFDAA30;
 
-    constexpr size_t dma_data_rom_addr = 0xDE480;
+    // Swap the overlay order from the compressed ROM to match the decompressed ROM order.
+    std::swap(overlays[3], overlays[4]);
+
+    mz_stream stream{};
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+    stream.avail_in = 0;
+    stream.next_in = Z_NULL;
+    mz_inflateInit2(&stream, -MAX_WBITS);
 
     std::vector<uint8_t> ret{};
-    ret.resize(0xEFFAE0);
 
-    size_t content_end = 0;
+    // Copy everything from the original ROM up until the first overlay into the decompressed ROM.
+    ret.reserve(0x2000000);
+    ret.assign(compressed_rom.begin(), compressed_rom.begin() + overlays[0].text_start);
 
-    do {
-        // Read the entry from the compressed rom.
-        size_t cur_entry_rom_address = dma_data_rom_addr + (cur_entry_index++) * sizeof(DmaDataEntry);
-        memcpy(&cur_entry, compressed_rom.data() + cur_entry_rom_address, sizeof(DmaDataEntry));
-        // Swap the entry to native endianness after reading from the big endian data.
-        cur_entry.bswap();
+    size_t cur_size = overlays[0].text_start;
 
-        // Rom end being 0 means the data is already uncompressed, so copy it as-is to vrom start.
-        uint32_t is_compressed = cur_entry.is_compressed;
-        if (!is_compressed) {
-            uint32_t entry_size = cur_entry.rom_end - cur_entry.rom_start;
-            memcpy(ret.data() + cur_entry.vrom_start, compressed_rom.data() + cur_entry.rom_start, cur_entry.rom_end - cur_entry.rom_start);
+    for (size_t overlay_index = 0; overlay_index < std::size(overlays); overlay_index++) {
+        uint32_t text_start = overlays[overlay_index].text_start;
+        uint32_t data_start = overlays[overlay_index].data_start;
+        uint32_t text_end = data_start;
+        uint32_t data_end =
+            overlay_index == (std::size(overlays) - 1) ? overlays_end : overlays[overlay_index + 1].text_start;
 
-            // Edit the entry to account for it being in a new location now.
-            cur_entry.rom_start = cur_entry.vrom_start;
-            cur_entry.rom_end = cur_entry.rom_start + entry_size;
-        }
-        // Otherwise, decompress the input data into the output data.
-        else {
-            if (cur_entry.rom_end != cur_entry.rom_start) {
-                // Validate the presence of the yaz0 header.
-                if (compressed_rom[cur_entry.rom_start + 0] != 'M' ||
-                    compressed_rom[cur_entry.rom_start + 1] != 'I' ||
-                    compressed_rom[cur_entry.rom_start + 2] != 'O' ||
-                    compressed_rom[cur_entry.rom_start + 3] != '0')
-                {
-                    assert(false);
-                    return {};
-                }
-                // Get the fields from the MIO0 header.
-                uint32_t entry_decompressed_size = 
-                    (compressed_rom[cur_entry.rom_start + 0x4] << 24) |
-                    (compressed_rom[cur_entry.rom_start + 0x5] << 16) |
-                    (compressed_rom[cur_entry.rom_start + 0x6] <<  8) |
-                    (compressed_rom[cur_entry.rom_start + 0x7] <<  0);
-                uint32_t compressed_stream_offset = 
-                    (compressed_rom[cur_entry.rom_start + 0x8] << 24) |
-                    (compressed_rom[cur_entry.rom_start + 0x9] << 16) |
-                    (compressed_rom[cur_entry.rom_start + 0xA] <<  8) |
-                    (compressed_rom[cur_entry.rom_start + 0xB] <<  0);
-                uint32_t uncompressed_stream_offset = 
-                    (compressed_rom[cur_entry.rom_start + 0xC] << 24) |
-                    (compressed_rom[cur_entry.rom_start + 0xD] << 16) |
-                    (compressed_rom[cur_entry.rom_start + 0xE] <<  8) |
-                    (compressed_rom[cur_entry.rom_start + 0xF] <<  0);
+        // Decompress .text
+        cur_size += decompress_bkzip(&stream, compressed_rom, text_start, text_end, ret, cur_size);
+        cur_size = (cur_size + 15ULL) & ~15ULL;
 
-                size_t compressed_data_rom_start = cur_entry.rom_start;
-                size_t entry_compressed_size = cur_entry.rom_end - compressed_data_rom_start;
+        // Decompress .data and .rodata
+        cur_size += decompress_bkzip(&stream, compressed_rom, data_start, data_end, ret, cur_size);
+        cur_size = (cur_size + 15ULL) & ~15ULL;
+    }
 
-                std::span input_span = std::span{ compressed_rom }.subspan(compressed_data_rom_start, entry_compressed_size);
-                std::span output_span = std::span{ ret }.subspan(cur_entry.vrom_start, entry_decompressed_size);
-                mio0_decompress(input_span, output_span, compressed_stream_offset, uncompressed_stream_offset);
-
-                // Edit the entry to account for it being decompressed now.
-                cur_entry.rom_start = cur_entry.vrom_start;
-                cur_entry.rom_end = cur_entry.rom_start + entry_decompressed_size;
-                cur_entry.is_compressed = 0;
-            }
-        }
-
-        // Swap the entry back to big endian for writing.
-        cur_entry.bswap();
-        // Write the modified entry to the decompressed rom.
-        memcpy(ret.data() + cur_entry_rom_address, &cur_entry, sizeof(DmaDataEntry));
-    } while (cur_entry.rom_end != 0);
+    mz_inflateReset(&stream);
 
     return ret;
 }
+
+void banjo::bk_on_init(uint8_t* rdram, recomp_context* ctx) {
+    MEM_W(0, (int32_t) 0x80000310) = 6103;
+    recomp::do_rom_read(rdram, (int32_t) 0x80000000, 0x100004C0, 0x2A4);
+}
+*/

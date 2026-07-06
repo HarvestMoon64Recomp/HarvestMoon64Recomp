@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=My Game: Recompiled
+Type=Application
+Terminal=false
+Exec=MyGameRecompiled
+Categories=Game;
+Comment=Static recompilation of My Game for PC.
+

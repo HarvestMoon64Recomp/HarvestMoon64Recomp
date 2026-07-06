@@ -1,12 +1,11 @@
 # VSCode file settings
 .vscode/settings.json
-# .vscode/c_cpp_properties.json
+.vscode/c_cpp_properties.json
 .vscode/launch.json
 
 # Input elf and rom files
 *.elf
 *.z64
-*.map
 
 # Output C files
 RecompiledFuncs/
@@ -14,7 +13,11 @@ RecompiledPatches/
 
 # Linux build output
 build/
+build-cmake/
 *.o
+
+# Flatpak build process
+repo/
 
 # Windows build output
 *.exe
@@ -22,12 +25,8 @@ build/
 *.lib
 *.pdb
 
-# Data dumps
-data_dump.toml
-dump.toml
-
-# Local backups
-backups
+# Nix build output
+/result/
 
 # User-specific files
 *.rsuser
@@ -57,6 +56,9 @@ out/
 .vs/
 vcpkg_installed/
 
+# clangd cache
+/.cache/
+
 # Runtime files
 imgui.ini
 rt64.log
@@ -70,10 +72,3 @@ RSPRecomp
 
 # Controller mappings file
 gamecontrollerdb.txt
-
-# audio data
-patches/audio_jp
-patches/audio_us
-patches/audio_eu
-
-build-cmake

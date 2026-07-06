@@ -2,33 +2,20 @@
 
 #include "recomp.h"
 #include "librecomp/overlays.hpp"
-#include "zelda_config.h"
-#include "recomp_input.h"
-#include "recomp_ui.h"
-#include "zelda_render.h"
-#include "zelda_sound.h"
+#include "librecomp/addresses.hpp"
+#include "harvestmoon64_config.h"
+#include "recompinput/recompinput.h"
+#include "recompui/recompui.h"
+#include "recompui/renderer.h"
 #include "librecomp/helpers.hpp"
-// #include "../patches/input.h"
-// #include "../patches/graphics.h"
-// #include "../patches/sound.h"
+#include "../patches/input.h"
+#include "../patches/graphics.h"
 #include "ultramodern/ultramodern.hpp"
 #include "ultramodern/config.hpp"
+#include "../lib/N64ModernRuntime/thirdparty/xxHash/xxh3.h"
 
 extern "C" void recomp_update_inputs(uint8_t* rdram, recomp_context* ctx) {
-    recomp::poll_inputs();
-}
-
-// extern "C" void sqrtf_recomp(uint8_t* rdram, recomp_context* ctx) {
-//     ctx->f0.fl = sqrtf(ctx->f12.fl);
-// }
-
-extern "C" void __ll_rshift_recomp(uint8_t * rdram, recomp_context * ctx) {
-    int64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
-    int64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
-    int64_t ret = a >> b;
-
-    ctx->r2 = (int32_t)(ret >> 32);
-    ctx->r3 = (int32_t)(ret >> 0);
+    recompinput::poll_inputs();
 }
 
 extern "C" void recomp_puts(uint8_t* rdram, recomp_context* ctx) {
@@ -44,18 +31,32 @@ extern "C" void recomp_exit(uint8_t* rdram, recomp_context* ctx) {
     ultramodern::quit();
 }
 
+extern "C" void recomp_error(uint8_t* rdram, recomp_context* ctx) {
+    std::string str{};
+    PTR(u8) str_ptr = _arg<0, PTR(u8)>(rdram, ctx);
+
+    for (size_t i = 0; MEM_B(str_ptr, i) != '\x00'; i++) {
+        str += (char)MEM_B(str_ptr, i);
+    }
+
+    recompui::message_box(str.c_str());
+    assert(false);
+    ultramodern::error_handling::quick_exit(__FILE__, __LINE__, __FUNCTION__);
+}
+
 extern "C" void recomp_get_gyro_deltas(uint8_t* rdram, recomp_context* ctx) {
     float* x_out = _arg<0, float*>(rdram, ctx);
     float* y_out = _arg<1, float*>(rdram, ctx);
 
-    recomp::get_gyro_deltas(x_out, y_out);
+    // TODO: use controller number
+    recompinput::get_gyro_deltas(0, x_out, y_out);
 }
 
 extern "C" void recomp_get_mouse_deltas(uint8_t* rdram, recomp_context* ctx) {
     float* x_out = _arg<0, float*>(rdram, ctx);
     float* y_out = _arg<1, float*>(rdram, ctx);
 
-    recomp::get_mouse_deltas(x_out, y_out);
+    recompinput::get_mouse_deltas(x_out, y_out);
 }
 
 extern "C" void recomp_powf(uint8_t* rdram, recomp_context* ctx) {
@@ -66,7 +67,9 @@ extern "C" void recomp_powf(uint8_t* rdram, recomp_context* ctx) {
 }
 
 extern "C" void recomp_get_target_framerate(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, ultramodern::get_target_framerate(30));
+    int frame_divisor = _arg<0, u32>(rdram, ctx);
+
+    _return(ctx, ultramodern::get_target_framerate(60 / frame_divisor));
 }
 
 extern "C" void recomp_get_window_resolution(uint8_t* rdram, recomp_context* ctx) {
@@ -92,41 +95,13 @@ extern "C" void recomp_get_target_aspect_ratio(uint8_t* rdram, recomp_context* c
             _return(ctx, original);
             return;
         case ultramodern::renderer::AspectRatio::Expand:
-            if (height > 0 && width > 0) {
-                _return(ctx, std::max(static_cast<float>(width) / height, original));
-            } else {
-                _return(ctx, original);
-            }
+            _return(ctx, std::max(static_cast<float>(width) / height, original));
             return;
     }
 }
 
-extern "C" void recomp_get_targeting_mode(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, static_cast<int>(zelda64::get_targeting_mode()));
-}
-
-extern "C" void recomp_get_bgm_volume(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, zelda64::get_bgm_volume() / 100.0f);
-}
-
-extern "C" void recomp_get_sfx_volume(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, zelda64::get_sfx_volume() / 100.0f);
-}
-
-extern "C" void recomp_get_voice_volume(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, zelda64::get_voice_volume() / 100.0f);
-}
-
-extern "C" void recomp_get_low_health_beeps_enabled(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, static_cast<u32>(zelda64::get_low_health_beeps_enabled()));
-}
-
 extern "C" void recomp_time_us(uint8_t* rdram, recomp_context* ctx) {
     _return(ctx, static_cast<u32>(std::chrono::duration_cast<std::chrono::microseconds>(ultramodern::time_since_start()).count()));
-}
-
-extern "C" void recomp_get_film_grain_enabled(uint8_t* rdram, recomp_context* ctx) {
-    _return(ctx, static_cast<s32>(zelda64::get_film_grain_mode() == zelda64::FilmGrainMode::On));
 }
 
 extern "C" void recomp_load_overlays(uint8_t * rdram, recomp_context * ctx) {
@@ -138,82 +113,79 @@ extern "C" void recomp_load_overlays(uint8_t * rdram, recomp_context * ctx) {
 }
 
 extern "C" void recomp_high_precision_fb_enabled(uint8_t * rdram, recomp_context * ctx) {
-    _return(ctx, static_cast<s32>(zelda64::renderer::RT64HighPrecisionFBEnabled()));
+    _return(ctx, static_cast<s32>(recompui::renderer::RT64HighPrecisionFBEnabled()));
 }
 
 extern "C" void recomp_get_resolution_scale(uint8_t* rdram, recomp_context* ctx) {
     _return(ctx, ultramodern::get_resolution_scale());
 }
 
-extern "C" void recomp_get_inverted_axes(uint8_t* rdram, recomp_context* ctx) {
-    s32* x_out = _arg<0, s32*>(rdram, ctx);
-    s32* y_out = _arg<1, s32*>(rdram, ctx);
-
-    zelda64::RadioBoxMode mode = zelda64::get_radio_comm_box_mode();
-
-    // *x_out = (mode == zelda64::AimInvertMode::InvertX || mode == zelda64::AimInvertMode::InvertBoth);
-    // *y_out = (mode == zelda64::AimInvertMode::InvertY || mode == zelda64::AimInvertMode::InvertBoth);
-}
-
-extern "C" void recomp_get_radio_comm_box_mode(uint8_t* rdram, recomp_context* ctx) {
-    _return<s32>(ctx, zelda64::get_radio_comm_box_mode() == zelda64::RadioBoxMode::Expand);
-}
-
-extern "C" void recomp_get_analog_inverted_axes(uint8_t* rdram, recomp_context* ctx) {
-    s32* x_out = _arg<0, s32*>(rdram, ctx);
-    s32* y_out = _arg<1, s32*>(rdram, ctx);
-
-    zelda64::AimInvertMode mode = zelda64::get_analog_camera_invert_mode();
-
-    // *x_out = (mode == zelda64::AimInvertMode::InvertX || mode == zelda64::AimInvertMode::InvertBoth);
-    // *y_out = (mode == zelda64::AimInvertMode::InvertY || mode == zelda64::AimInvertMode::InvertBoth);
-}
-
-extern "C" void recomp_get_invert_y_axis_mode(uint8_t* rdram, recomp_context* ctx) {
-    _return<s32>(ctx, zelda64::get_invert_y_axis_mode() == zelda64::AimInvertMode::On);
-}
-
-extern "C" void recomp_get_camera_inputs(uint8_t* rdram, recomp_context* ctx) {
+extern "C" void recomp_get_right_analog_inputs(uint8_t* rdram, recomp_context* ctx) {
     float* x_out = _arg<0, float*>(rdram, ctx);
     float* y_out = _arg<1, float*>(rdram, ctx);
 
-    // TODO expose this in the menu
-    constexpr float radial_deadzone = 0.05f;
-
-    float x, y;
-
-    recomp::get_right_analog(&x, &y);
-
-    float magnitude = sqrtf(x * x + y * y);
-
-    if (magnitude < radial_deadzone) {
+    // Don't return right analog inputs while game input is disabled.
+    if (recompinput::game_input_disabled()) {
         *x_out = 0.0f;
         *y_out = 0.0f;
+        return;
     }
-    else {
-        float x_normalized = x / magnitude;
-        float y_normalized = y / magnitude;
 
-        *x_out = x_normalized * ((magnitude - radial_deadzone) / (1 - radial_deadzone));
-        *y_out = y_normalized * ((magnitude - radial_deadzone) / (1 - radial_deadzone));
-    }
+    // TODO: Use controller number.
+    recompinput::get_right_analog(0, x_out, y_out);
 }
 
 extern "C" void recomp_set_right_analog_suppressed(uint8_t* rdram, recomp_context* ctx) {
     s32 suppressed = _arg<0, s32>(rdram, ctx);
 
-    recomp::set_right_analog_suppressed(suppressed);
+    recompinput::set_right_analog_suppressed(suppressed);
 }
 
-extern "C" void rmonPrintf_recomp(uint8_t* rdram, recomp_context* ctx) {
-
+constexpr uint32_t k1_to_phys(uint32_t addr) {
+    return addr & 0x1FFFFFFF;
 }
 
-extern "C" void bzero_recomp(uint8_t* rdram, recomp_context* ctx) {
-    char* ptr = _arg<0, char*>(rdram, ctx);
-    u32 size = _arg<1, u32>(rdram, ctx);
+extern "C" void osPiReadIo_recomp(RDRAM_ARG recomp_context * ctx) {
+    uint32_t devAddr = recomp::rom_base | ctx->r4;
+    gpr dramAddr = ctx->r5;
+    uint32_t physical_addr = k1_to_phys(devAddr);
 
-    for (int i = 0; i < size; i++) {
-        ptr[i] = 0;
+    if (physical_addr > recomp::rom_base) {
+        // cart rom
+        recomp::do_rom_pio(PASS_RDRAM dramAddr, physical_addr);
+    } else {
+        // sram
+        assert(false && "SRAM ReadIo unimplemented");
     }
+
+    ctx->r2 = 0;
 }
+
+extern "C" void osPfsInit_recomp(uint8_t * rdram, recomp_context* ctx) {
+    ctx->r2 = 11; // PFS_ERR_DEVICE
+}
+
+extern "C" void recomp_abort(uint8_t* rdram, recomp_context* ctx) {
+    std::string msg = _arg_string<0>(rdram, ctx);
+    recompui::message_box(msg.c_str());
+    assert(false);
+    ultramodern::error_handling::quick_exit(__FILE__, __LINE__, __FUNCTION__);
+}
+
+extern "C" void recomp_xxh3(uint8_t* rdram, recomp_context* ctx) {
+    PTR(void) data = _arg<0, PTR(void)>(rdram, ctx);
+    u32 size = _arg<1, u32>(rdram, ctx);
+    XXH3_state_t xxh3;
+    XXH3_64bits_reset(&xxh3);
+
+    // Hash 1 byte at a time to account for byteswapping.
+    for (size_t i = 0; i < size; i++) {
+        XXH3_64bits_update(&xxh3, TO_PTR(u8, data + i), 1);
+    }
+
+    uint64_t ret = XXH3_64bits_digest(&xxh3);
+    
+    ctx->r2 = (int32_t)(ret >> 32);
+    ctx->r3 = (int32_t)(ret >> 0);
+}
+

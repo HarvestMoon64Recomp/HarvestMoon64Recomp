@@ -12,6 +12,7 @@
 
 #include "ultramodern/ultra64.h"
 #include "ultramodern/ultramodern.hpp"
+#include "ultramodern/config.hpp"
 #define SDL_MAIN_HANDLED
 #ifdef _WIN32
 #include "SDL.h"
@@ -27,25 +28,27 @@
 #undef Always
 #endif
 
-#include "recomp_ui.h"
-#include "recomp_input.h"
-#include "zelda_config.h"
-#include "zelda_sound.h"
-#include "zelda_render.h"
-#include "zelda_support.h"
-#include "zelda_game.h"
+#include "recompui/recompui.h"
+#include "recompui/program_config.h"
+#include "recompui/renderer.h"
+#include "recompui/config.h"
+#include "util/file.h"
+#include "recompinput/input_events.h"
+#include "recompinput/recompinput.h"
+#include "recompinput/profiles.h"
+#include "harvestmoon64_config.h"
+#include "harvestmoon64_support.h"
+#include "harvestmoon64_game.h"
+#include "harvestmoon64_launcher.h"
 #include "recomp_data.h"
 #include "ovl_patches.hpp"
+#include "theme.h"
 #include "librecomp/game.hpp"
 #include "librecomp/mods.hpp"
 #include "librecomp/helpers.hpp"
 
 #include "../../patches/graphics.h"
-#include "../../patches/input.h"
-#include "../../patches/sound.h"
-#include "../../patches/misc_funcs.h"
-
-// #include "mods/mm_recomp_dpad_builtin.h"
+#include "../../patches/ui_funcs.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -56,7 +59,7 @@
 
 #include "../../lib/rt64/src/contrib/stb/stb_image.h"
 
-const std::string version_string = "1.1.1";
+const std::string version_string = "1.2.0";
 
 template<typename... Ts>
 void exit_error(const char* str, Ts ...args) {
@@ -75,7 +78,7 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) > 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) > 0) {
         exit_error("Failed to initialize SDL2: %s\n", SDL_GetError());
     }
 
@@ -84,52 +87,69 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
     return {};
 }
 
-#if defined(__gnu_linux__)
-#include "icon_bytes.h"
+ultramodern::input::connected_device_info_t get_connected_device_info(int controller_num) {
+    if (recompinput::players::is_single_player_mode() || recompinput::players::get_player_is_assigned(controller_num)) {
+        return ultramodern::input::connected_device_info_t{
+            .connected_device = ultramodern::input::Device::Controller,
+            .connected_pak = ultramodern::input::Pak::RumblePak,
+        };
+    }
 
+    return ultramodern::input::connected_device_info_t{
+        .connected_device = ultramodern::input::Device::None,
+        .connected_pak = ultramodern::input::Pak::None,
+    };
+}
+
+// TODO icon
+// #include "icon_bytes.h"
+
+#if defined(__gnu_linux__)
 bool SetImageAsIcon(const char* filename, SDL_Window* window)
 {
-    // Read data
-    int width, height, bytesPerPixel;
-    void* data = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(icon_bytes), sizeof(icon_bytes), &width, &height, &bytesPerPixel, 4);
+    return true;
+// TODO icon
+//     // Read data
+//     int width, height, bytesPerPixel;
+//     void* data = stbi_load_from_memory(reinterpret_cast<const uint8_t*>(icon_bytes), sizeof(icon_bytes), &width, &height, &bytesPerPixel, 4);
 
-    // Calculate pitch
-    int pitch;
-    pitch = width * 4;
-    pitch = (pitch + 3) & ~3;
+//     // Calculate pitch
+//     int pitch;
+//     pitch = width * 4;
+//     pitch = (pitch + 3) & ~3;
 
-    // Setup relevance bitmask
-    int Rmask, Gmask, Bmask, Amask;
+//     // Setup relevance bitmask
+//     int Rmask, Gmask, Bmask, Amask;
 
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-    Rmask = 0x000000FF;
-    Gmask = 0x0000FF00;
-    Bmask = 0x00FF0000;
-    Amask = 0xFF000000;
-#else
-    Rmask = 0xFF000000;
-    Gmask = 0x00FF0000;
-    Bmask = 0x0000FF00;
-    Amask = 0x000000FF;
-#endif
+// #if SDL_BYTEORDER == SDL_LIL_ENDIAN
+//     Rmask = 0x000000FF;
+//     Gmask = 0x0000FF00;
+//     Bmask = 0x00FF0000;
+//     Amask = 0xFF000000;
+// #else
+//     Rmask = 0xFF000000;
+//     Gmask = 0x00FF0000;
+//     Bmask = 0x0000FF00;
+//     Amask = 0x000000FF;
+// #endif
 
-    SDL_Surface* surface = nullptr;
-    if (data != nullptr) {
-        surface = SDL_CreateRGBSurfaceFrom(data, width, height, 32, pitch, Rmask, Gmask,
-                            Bmask, Amask);
-    }
+//     SDL_Surface* surface = nullptr;
+//     if (data != nullptr) {
+//         surface = SDL_CreateRGBSurfaceFrom(data, width, height, 32, pitch, Rmask, Gmask,
+//                             Bmask, Amask);
+//     }
 
-    if (surface == nullptr) {   
-        if (data != nullptr) {
-            stbi_image_free(data);
-        }
-        return false;
-	} else {
-        SDL_SetWindowIcon(window,surface);
-        SDL_FreeSurface(surface);
-        stbi_image_free(data);
-        return true;
-    }
+//     if (surface == nullptr) {
+//         if (data != nullptr) {
+//             stbi_image_free(data);
+//         }
+//         return false;
+// 	} else {
+//         SDL_SetWindowIcon(window,surface);
+//         SDL_FreeSurface(surface);
+//         stbi_image_free(data);
+//         return true;
+//     }
 }
 #endif
 
@@ -144,23 +164,22 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     flags |= SDL_WINDOW_VULKAN;
 #endif
 
-    window = SDL_CreateWindow("Harvest Moon 64: Recompiled", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 960,  flags);
-#if defined(__linux__)
-    SetImageAsIcon("icons/512.png",window);
-    if (ultramodern::renderer::get_graphics_config().wm_option == ultramodern::renderer::WindowMode::Fullscreen) { // TODO: Remove once RT64 gets native fullscreen support on Linux
-        SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN_DESKTOP);
-    } else {
-        SDL_SetWindowFullscreen(window,0);
-    }
-#endif
+    window = SDL_CreateWindow(" ", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900,  flags);
 
     if (window == nullptr) {
         exit_error("Failed to create window: %s\n", SDL_GetError());
     }
 
+    SDL_SetWindowTitle(window, " ");
+
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
     SDL_GetWindowWMInfo(window, &wmInfo);
+
+#if defined(__linux__)
+    // TODO icon
+    // SetImageAsIcon("icons/app.png", window);
+#endif
 
 #if defined(_WIN32)
     return ultramodern::renderer::WindowHandle{ wmInfo.info.win.window, GetCurrentThreadId() };
@@ -175,7 +194,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
 }
 
 void update_gfx(void*) {
-    recomp::handle_events();
+    recompinput::handle_events();
 }
 
 static SDL_AudioCVT audio_convert;
@@ -209,7 +228,7 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
     if (max_sample_count > swap_buffer.size()) {
         swap_buffer.resize(max_sample_count);
     }
-    
+
     // Copy the duplicated frames from last chunk into this chunk
     for (size_t i = 0; i < duplicated_input_frames * input_channels; i++) {
         swap_buffer[i] = duplicated_sample_buffer[i];
@@ -217,12 +236,12 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
 
     // Convert the audio from 16-bit values to floats and swap the audio channels into the
     // swap buffer to correct for the address xor caused by endianness handling.
-    float cur_main_volume = zelda64::get_main_volume() / 100.0f; // Get the current main volume, normalized to 0.0-1.0.
+    float cur_main_volume = static_cast<float>(recompui::config::sound::get_main_volume()) / 100.0f; // Get the current main volume, normalized to 0.0-1.0.
     for (size_t i = 0; i < sample_count; i += input_channels) {
-        swap_buffer[i + 0 + duplicated_input_frames * input_channels] = audio_data[i + 1] * (1.0f / 32768.0f) * cur_main_volume;
-        swap_buffer[i + 1 + duplicated_input_frames * input_channels] = audio_data[i + 0] * (1.0f / 32768.0f) * cur_main_volume;
+        swap_buffer[i + 0 + duplicated_input_frames * input_channels] = audio_data[i + 1] * (0.5f / 32768.0f) * cur_main_volume;
+        swap_buffer[i + 1 + duplicated_input_frames * input_channels] = audio_data[i + 0] * (0.5f / 32768.0f) * cur_main_volume;
     }
-    
+
     // TODO handle cases where a chunk is smaller than the duplicated frame count.
     assert(sample_count > duplicated_input_frames * input_channels);
 
@@ -303,7 +322,7 @@ void set_frequency(uint32_t freq) {
     update_audio_converter();
 }
 
-void reset_audio(uint32_t output_freq) {
+bool reset_audio(uint32_t output_freq) {
     SDL_AudioSpec spec_desired{
         .freq = (int)output_freq,
         .format = AUDIO_F32,
@@ -316,27 +335,27 @@ void reset_audio(uint32_t output_freq) {
         .userdata = nullptr
     };
 
-
     audio_device = SDL_OpenAudioDevice(nullptr, false, &spec_desired, nullptr, 0);
     if (audio_device == 0) {
-        exit_error("SDL error opening audio device: %s\n", SDL_GetError());
+        std::string audio_error = std::string("No audio device could be found. Please make sure an audio device is available.\nError opening audio device: ") + std::string(SDL_GetError());
+        recompui::message_box(audio_error.c_str());
+        return false;
     }
+
     SDL_PauseAudioDevice(audio_device, 0);
 
     output_sample_rate = output_freq;
     update_audio_converter();
+
+    return true;
 }
 
-// extern RspUcodeFunc njpgdspMain;
 extern RspUcodeFunc n_aspMain;
 
 RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
     switch (task->t.type) {
     case M_AUDTASK:
         return n_aspMain;
-
-    // case M_NJPEGTASK:
-    //     return njpgdspMain;
 
     default:
         fprintf(stderr, "Unknown task: %" PRIu32 "\n", task->t.type);
@@ -352,17 +371,21 @@ std::vector<recomp::GameEntry> supported_games = {
     {
         .rom_hash = 0x68b2c3755c527305ULL,
         .internal_name = "Harvest Moon 64",
+        .display_name = "Harvest Moon 64",
         .game_id = u8"harvest_moon_64",
         .mod_game_id = "hm64",
         .save_type = recomp::SaveType::AllowAll,
         .is_enabled = true,
+        .decompression_routine = nullptr,
+        .has_compressed_code = false,
         .entrypoint_address = get_entrypoint_address(),
         .entrypoint = recomp_entrypoint,
+        .on_init_callback = harvestmoon64::game_on_init,
     },
 };
 
 // TODO: move somewhere else
-namespace zelda64 {
+namespace harvestmoon64 {
     std::string get_game_thread_name(const OSThread* t) {
         std::string name = "[Game] ";
 
@@ -373,7 +396,7 @@ namespace zelda64 {
                         name += "PIMGR";
                         break;
 
-                    case 254:
+                    case 80:
                         name += "VIMGR";
                         break;
 
@@ -382,19 +405,20 @@ namespace zelda64 {
                         break;
                 }
                 break;
-
             case 1:
                 name += "IDLE";
                 break;
-
             case 2:
+                name += "CRASH";
+                break;
+            case 3:
                 switch (t->priority) {
-                    case 5:
-                        name += "SLOWLY";
+                    case 10:
+                        name += "MAIN";
                         break;
 
-                    case 127:
-                        name += "FAULT";
+                    case 70:
+                        name += "AUDIO";
                         break;
 
                     default:
@@ -402,39 +426,21 @@ namespace zelda64 {
                         break;
                 }
                 break;
-
-            case 3:
-                name += "MAIN";
-                break;
-
             case 4:
-                name += "GRAPH";
+                name += "GFX";
                 break;
-
             case 5:
-                name += "SCHED";
+                name += "TASKMGR";
                 break;
-
-            case 7:
-                name += "PADMGR";
+            case 17:
+                name += "NUGFX";
                 break;
-
-            case 10:
-                name += "AUDIOMGR";
-                break;
-
-            case 13:
-                name += "FLASHROM";
-                break;
-
             case 18:
-                name += "DMAMGR";
+                name += "NUAUDIO";
                 break;
-
             case 19:
-                name += "IRQMGR";
+                name += "NUSCHED";
                 break;
-
             default:
                 name += std::to_string(t->id);
                 break;
@@ -536,13 +542,25 @@ void release_preload(PreloadContext& context) {
     context = {};
 }
 
-#else
+#elif defined(__linux__) || defined(APPLE)
 
 struct PreloadContext {
 
 };
 
-// TODO implement on other platforms
+bool preload_executable(PreloadContext& context) {
+    // Preloading isn't implemented on Linux and MacOS, but it's also unnecessary there, as the OS already preloads the executable.
+    // Therefore, we can just consider the executable to be preloaded.
+    return true;
+}
+
+void release_preload(PreloadContext& context) {
+}
+
+#else
+
+struct PreloadContext {};
+
 bool preload_executable(PreloadContext& context) {
     return false;
 }
@@ -553,15 +571,29 @@ void release_preload(PreloadContext& context) {
 #endif
 
 void enable_texture_pack(recomp::mods::ModContext& context, const recomp::mods::ModHandle& mod) {
-    zelda64::renderer::enable_texture_pack(context, mod);
+    recompui::renderer::enable_texture_pack(context, mod);
 }
 
 void disable_texture_pack(recomp::mods::ModContext&, const recomp::mods::ModHandle& mod) {
-    zelda64::renderer::disable_texture_pack(mod);
+    recompui::renderer::disable_texture_pack(mod);
 }
 
 void reorder_texture_pack(recomp::mods::ModContext&) {
-    zelda64::renderer::trigger_texture_pack_update();
+    recompui::renderer::trigger_texture_pack_update();
+}
+
+void on_launcher_init(recompui::LauncherMenu *menu) {
+    auto game_options_menu = menu->init_game_options_menu(
+        supported_games[0].game_id,
+        supported_games[0].mod_game_id,
+        supported_games[0].display_name,
+        supported_games[0].thumbnail_bytes,
+        recompui::GameOptionsMenuLayout::Center
+    );
+    game_options_menu->add_default_options();
+
+    recompui::Element *menu_container = menu->get_menu_container();
+    harvestmoon64::launcher_animation_setup(menu);
 }
 
 #define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
@@ -589,12 +621,24 @@ int main(int argc, char** argv) {
     timeBeginPeriod(1);
 
     // Process arguments.
-    
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--show-console") == 0)
+        {
+            if (GetConsoleWindow() == nullptr)
+            {
+                AllocConsole();
+                freopen("CONIN$", "r", stdin);
+                freopen("CONOUT$", "w", stderr);
+                freopen("CONOUT$", "w", stdout);
+            }
+
+            break;
+        }
+    }
+
     // Set up console output to accept UTF-8 on windows
     SetConsoleOutputCP(CP_UTF8);
-
-    // Initialize native file dialogs.
-    NFD_Init();
 
     // Change to a font that supports Japanese characters
     CONSOLE_FONT_INFOEX cfi;
@@ -621,53 +665,70 @@ int main(int argc, char** argv) {
     std::filesystem::current_path("/var/data", ec);
 #endif
 
+    // Initialize native file dialogs.
+    NFD_Init();
+
+    // Initialize program settings.
+    recompui::programconfig::set_program_name(harvestmoon64::program_name);
+    recompui::programconfig::set_program_id(harvestmoon64::program_id);
+
     // Initialize SDL audio and set the output frequency.
     SDL_InitSubSystem(SDL_INIT_AUDIO);
-    reset_audio(48000);
+    if (!reset_audio(48000)) {
+        // It is not possible to initialize without an audio device.
+        return EXIT_FAILURE;
+    }
 
     // Source controller mappings file
-    std::u8string controller_db_path = (zelda64::get_program_path() / "recompcontrollerdb.txt").u8string();
+    std::u8string controller_db_path = (recompui::file::get_program_path() / "recompcontrollerdb.txt").u8string();
     if (SDL_GameControllerAddMappingsFromFile(reinterpret_cast<const char *>(controller_db_path.c_str())) < 0) {
         fprintf(stderr, "Failed to load controller mappings: %s\n", SDL_GetError());
     }
 
-    recomp::register_config_path(zelda64::get_app_folder_path());
+    // Register fonts.
+    recompui::register_primary_font("funhouse.ttf", "Funhouse");
+    recompui::register_extra_font("Suplexmentary Comic NC.ttf");
+
+    // Register configuration path.
+    recomp::register_config_path(recompui::file::get_app_folder_path());
 
     // Register supported games and patches
     for (const auto& game : supported_games) {
         recomp::register_game(game);
     }
 
-    //recomp::mods::register_embedded_mod("mm_recomp_dpad_builtin", { (const uint8_t*)(mm_recomp_dpad_builtin), std::size(mm_recomp_dpad_builtin)});
-
     REGISTER_FUNC(recomp_get_window_resolution);
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_framerate);
-    REGISTER_FUNC(recomp_get_film_grain_enabled);
-    REGISTER_FUNC(recomp_get_invert_y_axis_mode);
-    REGISTER_FUNC(recomp_get_radio_comm_box_mode);
-    REGISTER_FUNC(recomp_get_camera_inputs);
-    REGISTER_FUNC(recomp_get_targeting_mode);
-    REGISTER_FUNC(recomp_get_bgm_volume);
-    REGISTER_FUNC(recomp_get_low_health_beeps_enabled);
-    REGISTER_FUNC(recomp_get_gyro_deltas);
-    REGISTER_FUNC(recomp_get_mouse_deltas);
-    REGISTER_FUNC(recomp_get_inverted_axes);
-    REGISTER_FUNC(recomp_get_analog_inverted_axes);
+    // REGISTER_FUNC(recomp_get_gyro_deltas);
+    // REGISTER_FUNC(recomp_get_mouse_deltas);
+    REGISTER_FUNC(recomp_run_ui_callbacks);
     recompui::register_ui_exports();
     recomputil::register_data_api_exports();
+    recomptheme::set_custom_theme();
 
-    zelda64::register_overlays();
-    zelda64::register_patches();
-    // recomputil::init_extended_actor_data();
-    zelda64::load_config();
+    harvestmoon64::register_overlays();
+    harvestmoon64::register_patches();
+
+    // Register extensions for two types: Props and ActorMarkers.
+    recomputil::init_extended_object_data(2);
+
+    recompinput::players::set_single_player_mode(true);
+
+    harvestmoon64::init_config();
+
+    recompui::register_launcher_init_callback(on_launcher_init);
+    recompui::register_launcher_update_callback(harvestmoon64::launcher_animation_update);
 
     recomp::rsp::callbacks_t rsp_callbacks{
         .get_rsp_microcode = get_rsp_microcode,
     };
 
     ultramodern::renderer::callbacks_t renderer_callbacks{
-        .create_render_context = zelda64::renderer::create_render_context,
+        .create_render_context = [](uint8_t* rdram, ultramodern::renderer::WindowHandle window_handle, bool developer_mode) {
+            auto presentation_mode = ultramodern::renderer::PresentationMode::PresentEarly;
+            return recompui::renderer::create_render_context(rdram, window_handle, presentation_mode, developer_mode);
+        },
     };
 
     ultramodern::gfx_callbacks_t gfx_callbacks{
@@ -683,15 +744,15 @@ int main(int argc, char** argv) {
     };
 
     ultramodern::input::callbacks_t input_callbacks{
-        .poll_input = recomp::poll_inputs,
-        .get_input = recomp::get_n64_input,
-        .set_rumble = recomp::set_rumble,
-        .get_connected_device_info = recomp::get_connected_device_info,
+        .poll_input = recompinput::poll_inputs,
+        .get_input = recompinput::profiles::get_n64_input,
+        .set_rumble = recompinput::set_rumble,
+        .get_connected_device_info = get_connected_device_info,
     };
 
     ultramodern::events::callbacks_t thread_callbacks{
-        .vi_callback = recomp::update_rumble,
-        .gfx_init_callback = recompui::update_supported_options,
+        .vi_callback = recompinput::update_rumble,
+        .gfx_init_callback = nullptr,
     };
 
     ultramodern::error_handling::callbacks_t error_handling_callbacks{
@@ -699,7 +760,7 @@ int main(int argc, char** argv) {
     };
 
     ultramodern::threads::callbacks_t threads_callbacks{
-        .get_game_thread_name = zelda64::get_game_thread_name,
+        .get_game_thread_name = harvestmoon64::get_game_thread_name,
     };
 
     // Register the texture pack content type with rt64.json as its content file.
@@ -733,11 +794,11 @@ int main(int argc, char** argv) {
     if (preloaded) {
         release_preload(preload_context);
     }
-    
-    #ifdef _WIN32
+
+#ifdef _WIN32
     // End high resolution timing period.
     timeEndPeriod(1);
-    #endif
-    
+#endif
+
     return EXIT_SUCCESS;
 }

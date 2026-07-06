@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
+  "version": "0.0.1",
   "defaults": {},
   "configurations": [
     {
@@ -7,7 +7,8 @@
       "project": "CMakeLists.txt",
       "projectTarget": "HarvestMoon64Recompiled.exe",
       "name": "HarvestMoon64Recompiled.exe",
-      "currentDir": "${workspaceRoot}"
+      "currentDir": "${workspaceRoot}",
+      "args": ["--show-console"]
     }
   ]
 }

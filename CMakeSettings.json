@@ -1,4 +1,4 @@
-﻿{
+{
   "configurations": [
     {
       "name": "x64-Debug",
@@ -31,7 +31,8 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "clang_cl_x64" ]
+      "inheritEnvironments": [ "clang_cl_x64" ],
+      "variables": []
     }
   ]
 }

@@ -1,6 +1,7 @@
 #include "patches.h"
 #include "graphics.h"
 #include "os.h"
+#include "ui_funcs.h"
 
 int dummy = 1;
 int dummyBSS;
@@ -17,6 +18,7 @@ extern volatile u16 D_80182BA0;
 extern volatile u16 D_8020564C;
 extern volatile u8 D_80237A04;
 extern volatile u8 retraceCount;
+extern OSMesgQueue auDmaMesgQ;
 
 void yield_self_1ms(void);
 void func_80026284(void);
@@ -40,6 +42,12 @@ void updateDialogues(void);
 
 void update_intro_visual_scale(void);
 void update_2d_widescreen_sprite_flags(void);
+
+static void drain_unused_audio_dma_messages(void) {
+    // @recomp N64ModernRuntime now requeues audio messages, so we need to drain them to avoid filling up the queue.
+    while (osRecvMesg(&auDmaMesgQ, (OSMesg*)0, OS_MESG_NOBLOCK) == 0) {
+    }
+}
 
 RECOMP_PATCH void mainLoop(void) {
     stepMainLoop = FALSE;
@@ -71,6 +79,9 @@ RECOMP_PATCH void mainLoop(void) {
 
             D_8020564C -= 1;
 
+            // @recomp Run UI callbacks so mods can register recompui menus/buttons and have their callbacks fire every frame.
+            recomp_run_ui_callbacks();
+
             update_intro_visual_scale();
             resetBitmaps();
             updateAudio();
@@ -85,6 +96,7 @@ RECOMP_PATCH void mainLoop(void) {
             update_2d_widescreen_sprite_flags();
             updateSprites();
             dmaSprites();
+            drain_unused_audio_dma_messages();
             updateBitmaps();
             updateMessageBox();
             updateDialogues();

@@ -1,27 +1,15 @@
 [submodule "lib/N64ModernRuntime"]
 	path = lib/N64ModernRuntime
 	url = https://github.com/N64Recomp/N64ModernRuntime
-[submodule "lib/RmlUi"]
-	path = lib/RmlUi
-	url = https://github.com/mikke89/RmlUi
-[submodule "lib/freetype-windows-binaries"]
-	path = lib/freetype-windows-binaries
-	url = https://github.com/ubawurinna/freetype-windows-binaries
-[submodule "lib/lunasvg"]
-	path = lib/lunasvg
-	url = https://github.com/sammycage/lunasvg
 [submodule "lib/rt64"]
 	path = lib/rt64
 	url = https://github.com/rt64/rt64
-[submodule "lib/sse2neon"]
-	path = lib/sse2neon
-	url = https://github.com/DLTcollab/sse2neon.git
-[submodule "HarvestMoon64Syms"]
-	path = HarvestMoon64Syms
-	url = https://github.com/Rainchus/HarvestMoon64Syms
-[submodule "lib/hm64-decomp"]
-	path = lib/hm64-decomp
-	url = https://github.com/harvestwhisperer/hm64-decomp
+[submodule "lib/RecompFrontend"]
+	path = lib/RecompFrontend
+	url = https://github.com/N64Recomp/RecompFrontend
 [submodule "HarvestMoon64RecompSyms"]
 	path = HarvestMoon64RecompSyms
 	url = https://github.com/HarvestMoon64Recomp/HarvestMoon64RecompSyms
+[submodule "lib/hm64-decomp"]
+	path = lib/hm64-decomp
+	url = https://github.com/harvestwhisperer/hm64-decomp

@@ -1,9 +1,9 @@
 {
   "id": "io.github.harvestmoon64recomp.harvestmoon64recomp",
   "runtime": "org.freedesktop.Platform",
-  "runtime-version": "23.08",
+  "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
-  "sdk-extensions" : [ "org.freedesktop.Sdk.Extension.llvm18" ],
+  "sdk-extensions" : [ "org.freedesktop.Sdk.Extension.llvm20" ],
   "finish-args": [
     "--share=network",
     "--socket=wayland",
@@ -34,7 +34,7 @@
         "cp cmake-build/HarvestMoon64Recompiled /app/bin/HarvestMoon64Recompiled",
         "cp recompcontrollerdb.txt /app/bin/recompcontrollerdb.txt",
         "cp -R assets /app/bin/assets",
-        "install -Dm644 icons/512.png /app/share/icons/hicolor/512x512/apps/${FLATPAK_ID}.png",
+        "install -Dm644 icons/app.png /app/share/icons/hicolor/512x512/apps/${FLATPAK_ID}.png",
         "install -Dm644 flatpak/io.github.harvestmoon64recomp.harvestmoon64recomp.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml",
         "install -Dm644 flatpak/io.github.harvestmoon64recomp.harvestmoon64recomp.desktop /app/share/applications/${FLATPAK_ID}.desktop"
       ],
@@ -42,7 +42,7 @@
         {
           "type": "git",
           "url": "https://github.com/N64Recomp/N64Recomp.git",
-          "commit": "98bf104b1b5ed83126af8bcab0cc964782617dbf",
+          "commit": "2b6f05688de2abc7d86da5b4a89b84c2c6acbabe",
           "dest": "lib/N64Recomp"
         },
         {
@@ -51,8 +51,8 @@
         }
       ],
       "build-options": {
-        "append-path": "/usr/lib/sdk/llvm18/bin",
-        "prepend-ld-library-path": "/usr/lib/sdk/llvm18/lib",
+        "append-path": "/usr/lib/sdk/llvm20/bin",
+        "prepend-ld-library-path": "/usr/lib/sdk/llvm20/lib",
         "build-args": [
           "--share=network"
         ]
