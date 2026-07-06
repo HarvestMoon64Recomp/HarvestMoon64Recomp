@@ -17,6 +17,7 @@
 #define HM64_CHECKERBOARD_BACKGROUND_SPRITE        0x80
 #define HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X     14.0f
 #define HM64_CORE_MAP_OBJECT_MATRIX_GROUP_ID_BASE  0x484D6F00
+#define HM64_GLOBAL_SPRITE_MATRIX_GROUP_ID_BASE     0x484D7300
 #define HM64_ELLEN_DEATH_CUTSCENE                  416
 #define HM64_ELLEN_DEATH_WHITE_FADE_SPRITE         160
 
@@ -285,6 +286,10 @@ RECOMP_PATCH void setBitmapFromSpriteObject(u16 spriteIndex, AnimationFrameMetad
             break;
         }
 
+        if (!(globalSprites[spriteIndex].stateFlags & SPRITE_NO_TRANSFORM)) {
+            hm64_bitmapMatrixGroupId[bitmapIndex] = HM64_GLOBAL_SPRITE_MATRIX_GROUP_ID_BASE + ((u32)spriteIndex << 8) + i;
+        }
+
         // @recomp don't interpolate bitmaps.
         hm64_bitmaps[bitmapIndex].flags |= (globalSprites[spriteIndex].stateFlags & HM64_WIDESCREEN_FLAGS);
         if ((gCutsceneIndex == HM64_ELLEN_DEATH_CUTSCENE) &&
@@ -393,8 +398,7 @@ RECOMP_PATCH Gfx* generateBitmapDisplayList(Gfx* dl, BitmapObject* bitmap, u16 s
         gEXMatrixGroupNoInterpolate(dl, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
         dl += 2;
     } else if (matrixGroupId) {
-        // @recomp group map decorations for RT64 interpolation.
-        gEXMatrixGroupDecomposedVertsOrderAuto(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+        gEXMatrixGroupDecomposedVertsSkipOrderAuto(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
         dl += 2;
     }
 

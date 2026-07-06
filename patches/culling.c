@@ -1,8 +1,10 @@
 #include "patches.h"
 
+#include "system/graphic.h"
 #include "system/map.h"
 #include "system/mapController.h"
 #include "system/sceneGraph.h"
+#include "system/sprite.h"
 
 // @recomp Disabling tile culling makes every tile render each frame, and grid-scan emission (see
 // buildMapDisplayList) reloads textures more often than texture-batched emission, so these buffers
@@ -10,6 +12,7 @@
 #define HM64_BIG_MAP_DL_SIZE 64000
 #define HM64_BIG_TILE_VTX_SIZE 49152
 #define HM64_MAP_MATRIX_GROUP_ID_BASE 0x484D6400
+#define HM64_GROUND_OBJECT_MATRIX_GROUP_ID_BASE 0x484E4000
 
 static Gfx hm64_bigMapDisplayList[2][HM64_BIG_MAP_DL_SIZE];
 static Vtx hm64_bigTileVertices[2][HM64_BIG_TILE_VTX_SIZE];
@@ -20,7 +23,12 @@ extern void processMapAdditions(u16 mapIndex);
 extern void setupCoreMapObjectSprites(MainMap* map);
 extern void setupMapObjectSprites(MainMap* map);
 extern void setupWeatherSprites(MainMap* map);
-extern void renderGroundObjects(MainMap* map);
+
+extern Gfx groundObjectBitmapsDisplayList[2][0x1000];
+extern Vtx groundObjectVertices[2][320][4];
+extern u8 gridIndexToTileIndexX[20 * 24];
+extern u8 gridIndexToTileIndexZ[20 * 24];
+static u16 hm64_groundObjectRenderOccurrence[MAX_GROUND_OBJECTS];
 
 RECOMP_PATCH bool checkTileVisible(MainMap* map, u8 x, u8 z) {
     (void)map;
@@ -191,6 +199,74 @@ RECOMP_PATCH void processMapSceneNode(u16 mapIndex, Gfx* dl) {
                          mainMap[mapIndex].mapGlobals.rotation.y,
                          mainMap[mapIndex].mapGlobals.rotation.z);
 }
+RECOMP_PATCH Gfx* renderGroundObject(Gfx* dl, MainMap* map, GroundObjectBitmap* bitmap, u16 vtxIndex) {
+    Gfx tempDl[2];
+    u16 typeIndex = (u16)(bitmap - map->groundObjectBitmaps);
+    u32 matrixGroupId = 0;
+    Gfx* dlEnd = &groundObjectBitmapsDisplayList[gGraphicsBufferIndex][0x1000];
+
+    if (vtxIndex == 0) {
+        for (u16 j = 0; j < MAX_GROUND_OBJECTS; j++) {
+            hm64_groundObjectRenderOccurrence[j] = 0;
+        }
+    }
+
+    if (dl + 16 < dlEnd) {
+        u16 gridIndex = map->groundObjects.spriteIndexToGrid[typeIndex];
+        u16 target = hm64_groundObjectRenderOccurrence[typeIndex];
+        u16 seen = 0;
+
+        while (gridIndex != 0xFFFF) {
+            if (map->visibilityGrid[gridIndexToTileIndexZ[gridIndex] + map->groundObjects.z][gridIndexToTileIndexX[gridIndex] + map->groundObjects.x]) {
+                if (seen == target) {
+                    matrixGroupId = HM64_GROUND_OBJECT_MATRIX_GROUP_ID_BASE + gridIndex;
+                    break;
+                }
+                seen++;
+            }
+            gridIndex = map->groundObjects.nextGridToSpriteIndex[gridIndex];
+        }
+    }
+
+    hm64_groundObjectRenderOccurrence[typeIndex]++;
+
+    if (matrixGroupId) {
+        gEXMatrixGroupDecomposedVertsSkipOrderAuto(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+        dl += 2;
+    }
+
+    setupBitmapVertices(&groundObjectVertices[gGraphicsBufferIndex][vtxIndex],
+        bitmap->width,
+        bitmap->height,
+        bitmap->height,
+        0,
+        0,
+        0,
+        0,
+        0,
+        (BITMAP_ANCHOR_H(SPRITE_ANCHOR_CENTER) | BITMAP_ANCHOR_V(SPRITE_ANCHOR_CENTER) | BITMAP_AXIS(SPRITE_BILLBOARD_XY)),
+        map->mapGlobals.currentRGBA.r,
+        map->mapGlobals.currentRGBA.g,
+        map->mapGlobals.currentRGBA.b,
+        map->mapGlobals.currentRGBA.a);
+
+    // FIXME: might be a wrapper around gSPVertex (kept as-is from the original decomp)
+    gSPVertex(&tempDl[1], &groundObjectVertices[gGraphicsBufferIndex][vtxIndex][0], 4, 0);
+    *tempDl = *(tempDl + 1);
+    *dl++ = *tempDl;
+
+    gSP2Triangles(dl++, 0, 1, 2, 0, 0, 2, 3, 0);
+    gDPPipeSync(dl++);
+
+    if (matrixGroupId) {
+        gEXPopMatrixGroup(dl++, G_MTX_MODELVIEW);
+    }
+    gSPEndDisplayList(dl++);
+
+    return dl;
+}
+
+extern void renderGroundObjects(MainMap* map);
 
 RECOMP_PATCH void updateMapGraphics(void) {
     u16 startingCount = 0;
