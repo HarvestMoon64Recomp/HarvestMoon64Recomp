@@ -9,18 +9,6 @@ Join the [N64: Recompiled Community Discord](https://discord.gg/AWZThJ4dPf) to d
 
 ### **This repository and its releases do not contain game assets. The original game is required to build or run this project.**
 
-<div align="left" valign="middle">
-<a href="https://runblaze.dev">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://www.runblaze.dev/logo_dark.png">
-   <img align="right" src="https://www.runblaze.dev/logo_light.png" height="102px"/>
- </picture>
-</a>
-
-<br style="display: none;"/>
-
-</div>
-
 ## Table of Contents
 * [System Requirements](#system-requirements)
 * [Features](#features)
