@@ -35,16 +35,15 @@ The other tool necessary will be `make` which can be installed via [Chocolatey](
 choco install make
 ```
 
-## 3. Preparing the target ROM (This is because I haven't gotten the symbols done yet, so you have to provide an ELF)
-You will need to obtain the NTSC-U N64 Harvest Moon 64 rom and elf before running the recompiler by decompiling the game via the [HM64Decomp](https://github.com/harvestwhisperer/hm64-decomp/).
+## 3. Preparing the target ROM
+You will need to obtain a NTSC-U N64 Harvest Moon 64 rom.
 
-After that, copy the ROM and elf files to the root of the HarvestMoon64Recomp repository with these filenames:
+After that, copy the ROM to the root of the HarvestMoon64Recomp repository with this filename:
 - `hm64.us.z64`
-- `hm64.us.elf`
 
 ## 4. Generating the C code
 
-Now that you have the required files, you must build [N64Recomp](https://github.com/Mr-Wiseguy/N64Recomp) and run it to generate the C code to be compiled. The building instructions can be found [here](https://github.com/Mr-Wiseguy/N64Recomp?tab=readme-ov-file#building). That will build the executables: `N64Recomp` and `RSPRecomp` which you should copy to the root of the HarvestMoon64Recomp repository.
+Now that you have the required files, you must build [N64Recomp](https://github.com/N64Recomp/N64Recomp) and run it to generate the C code to be compiled. The building instructions can be found [here](https://github.com/N64Recomp/N64Recomp?tab=readme-ov-file#building). That will build the executables: `N64Recomp` and `RSPRecomp` which you should copy to the root of the HarvestMoon64Recomp repository.
 
 After that, go back to the repository root, and run the following commands:
 ```bash
