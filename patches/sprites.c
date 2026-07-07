@@ -16,6 +16,8 @@
 #define HM64_SCREEN_HEIGHT                         240
 #define HM64_CHECKERBOARD_BACKGROUND_SPRITE        0x80
 #define HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X     14.0f
+#define HM64_HOW_TO_PLAY_CHECKERBOARD_SPRITE        80
+#define HM64_HOW_TO_PLAY_CHECKERBOARD_WIDESCREEN_OVERLAP_X 14.0f
 #define HM64_CORE_MAP_OBJECT_MATRIX_GROUP_ID_BASE  0x484D6F00
 #define HM64_GLOBAL_SPRITE_MATRIX_GROUP_ID_BASE     0x484D7300
 #define HM64_ELLEN_DEATH_CUTSCENE                  416
@@ -296,8 +298,15 @@ RECOMP_PATCH void setBitmapFromSpriteObject(u16 spriteIndex, AnimationFrameMetad
             (spriteIndex == HM64_ELLEN_DEATH_WHITE_FADE_SPRITE)) {
             hm64_bitmaps[bitmapIndex].flags |= HM64_WIDESCREEN_FULLSCREEN;
         }
-        hm64_bitmapWidescreenOverlapX[bitmapIndex] = (spriteIndex == HM64_CHECKERBOARD_BACKGROUND_SPRITE) ? HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X : 0.0f;
-        hm64_bitmapNoInterpolate[bitmapIndex] = (spriteIndex == HM64_CHECKERBOARD_BACKGROUND_SPRITE);
+        if (spriteIndex == HM64_CHECKERBOARD_BACKGROUND_SPRITE) {
+            hm64_bitmapWidescreenOverlapX[bitmapIndex] = HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X;
+        } else if (spriteIndex == HM64_HOW_TO_PLAY_CHECKERBOARD_SPRITE) {
+            hm64_bitmapWidescreenOverlapX[bitmapIndex] = HM64_HOW_TO_PLAY_CHECKERBOARD_WIDESCREEN_OVERLAP_X;
+        } else {
+            hm64_bitmapWidescreenOverlapX[bitmapIndex] = 0.0f;
+        }
+        hm64_bitmapNoInterpolate[bitmapIndex] = (spriteIndex == HM64_CHECKERBOARD_BACKGROUND_SPRITE) ||
+            ((globalSprites[spriteIndex].stateFlags & SPRITE_NO_TRANSFORM) != 0);
         setBitmapViewSpacePosition(bitmapIndex, globalSprites[spriteIndex].viewSpacePosition.x, globalSprites[spriteIndex].viewSpacePosition.y, globalSprites[spriteIndex].viewSpacePosition.z);
         setBitmapScale(bitmapIndex, globalSprites[spriteIndex].scale.x, globalSprites[spriteIndex].scale.y, globalSprites[spriteIndex].scale.z);
         setBitmapRotation(bitmapIndex, globalSprites[spriteIndex].rotation.x, globalSprites[spriteIndex].rotation.y, globalSprites[spriteIndex].rotation.z);

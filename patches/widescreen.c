@@ -15,6 +15,8 @@
 #define SOWING_FESTIVAL_SCROLLING_BACKGROUND_2     151
 #define HORSE_RACE_BACKGROUND_FIRST_SPRITE         160
 #define HORSE_RACE_BACKGROUND_LAST_SPRITE          168
+#define HOW_TO_PLAY_CUTSCENE            1600
+#define HOW_TO_PLAY_CHECKERBOARD_SPRITE 80
 
 #define TITLE_SCREEN_CLOUD_1_1        0x54
 #define TITLE_SCREEN_CLOUD_1_2        0x55
@@ -86,6 +88,7 @@ static void clear_2d_widescreen_flags(void) {
     clear_sprite_widescreen_flags(LANDSCAPE_BACKGROUND);
     clear_sprite_widescreen_flags(OPENING_LOGO_BACKGROUND_SPRITE);
     clear_sprite_widescreen_flags(FUNERAL_INTRO_BACKGROUND_SPRITE);
+    clear_sprite_widescreen_flags(HOW_TO_PLAY_CHECKERBOARD_SPRITE);
     clear_sprite_tag_flags(sowing_festival_sprite_tags, ARRAY_COUNT(sowing_festival_sprite_tags));
     clear_sprite_tag_flags(title_screen_sprite_tags, ARRAY_COUNT(title_screen_sprite_tags));
     clear_sprite_range_flags(HORSE_RACE_BACKGROUND_FIRST_SPRITE, HORSE_RACE_BACKGROUND_LAST_SPRITE);
@@ -147,6 +150,10 @@ static void tag_intro_background_sprites(void) {
 
         case FUNERAL_INTRO_CUTSCENE:
             tag_active_sprite(FUNERAL_INTRO_BACKGROUND_SPRITE, HM64_WIDESCREEN_FULLSCREEN);
+            break;
+
+        case HOW_TO_PLAY_CUTSCENE:
+            tag_active_sprite(HOW_TO_PLAY_CHECKERBOARD_SPRITE, HM64_WIDESCREEN_FULLSCREEN | HM64_WIDESCREEN_MIRROR_COPIES);
             break;
     }
 }
