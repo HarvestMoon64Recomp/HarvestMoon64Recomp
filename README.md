@@ -9,18 +9,6 @@ Join the [N64: Recompiled Community Discord](https://discord.gg/AWZThJ4dPf) to d
 
 ### **This repository and its releases do not contain game assets. The original game is required to build or run this project.**
 
-<div align="left" valign="middle">
-<a href="https://runblaze.dev">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://www.runblaze.dev/logo_dark.png">
-   <img align="right" src="https://www.runblaze.dev/logo_light.png" height="102px"/>
- </picture>
-</a>
-
-<br style="display: none;"/>
-
-</div>
-
 ## Table of Contents
 * [System Requirements](#system-requirements)
 * [Features](#features)
@@ -92,13 +80,6 @@ Static recompilation is the process of automatically translating an application 
 #### How is this related to the decompilation project?
 Unlike N64 ports in the past, this project is not based on the source code provided by a decompilation of the game. This is because static recompilation bypasses the need for decompiled source code when making a port, allowing ports to be made **without source code**. However, the reverse engineering work done by the decompilation team was invaluable for providing some of the enhancements featured in this project. For this reason, the project uses headers and some functions from the decompilation project in order to make modifications to the game. Many thanks to the decompilation team for all of the hard work they've done.
 
-#### How do I set up gyro aiming on Steam Deck?
-This project provides mouse aiming as a way to allow using gyro on Steam Deck, as the Steam Deck's gyro sensors cannot be read directly. First, launch the game in Gaming Mode, press the Steam button and go to "Controller Settings". Choose "Controller Settings" again in the menu that follows, and then set "Gyro Behavior" to "As Mouse".
-
-![Controller Settings menu](docs/deck_gyro_1.jpg)
-
-You'll probably also want to change the default behavior so that you don't need to be touching the right stick to allow gyro input. To do so, click on the Gear icon to the right of "Gyro Behavior" and ensure that "Gyro Activation Buttons" is set to "None Selected (Gyro Always On)." If this isn't the case, then select that option and then press "Select None" in the following menu.
-
 #### Where is the savefile stored?
 - Windows: `%LOCALAPPDATA%\HarvestMoon64Recompiled\saves`
 - Linux: `~/.config/HarvestMoon64Recompiled/saves`
@@ -114,11 +95,9 @@ Yes, if you place a file named `portable.txt` in the same folder as the executab
 Building is not required to play this project, as prebuilt binaries (which do not contain game assets) can be found in the [Releases](https://github.com/HarvestMoon64Recomp/HarvestMoon64Recomp/releases/) section. Instructions on how to build this project can be found in the [BUILDING.md](BUILDING.md) file.
 
 ## Libraries Used and Projects Referenced
-* [N64Recomp](https://github.com/N64Recomp/N64Recomp) for allowing recompilation to be possible
+## Libraries Used and Projects Referenced
+* [N64Recomp](https://github.com/N64Recomp/N64Recomp) for statically recompiling the game's code to run natively
 * [RT64](https://github.com/rt64/rt64) for the project's rendering engine
-* [RmlUi](https://github.com/mikke89/RmlUi) for building the menus and launcher
-* [lunasvg](https://github.com/sammycage/lunasvg) for SVG rendering, used by RmlUi
-* [FreeType](https://freetype.org/) for font rendering, used by RmlUi  
-* [moodycamel::ConcurrentQueue](https://github.com/cameron314/concurrentqueue) for semaphores and fast, lock-free MPMC queues
-* [Gamepad Motion Helpers](https://github.com/JibbSmart/GamepadMotionHelpers) for sensor fusion and calibration algorithms to implement gyro aiming
+* [N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime) for replacing the original N64 runtime libraries and providing mod support
+* [RecompFrontend](https://github.com/N64Recomp/RecompFrontend) for menus and input handling
 * [Harvest Moon 64 Decompilation](https://github.com/harvestwhisperer/hm64-decomp) for headers and some function definitions, used for making patches or some enhancements
