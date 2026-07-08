@@ -48,6 +48,7 @@
 #include "librecomp/helpers.hpp"
 
 #include "../../patches/graphics.h"
+#include "../../patches/sound.h"
 #include "../../patches/ui_funcs.h"
 
 #ifdef _WIN32
@@ -700,6 +701,8 @@ int main(int argc, char** argv) {
     REGISTER_FUNC(recomp_get_window_resolution);
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_framerate);
+    REGISTER_FUNC(recomp_get_music_volume);
+    REGISTER_FUNC(recomp_get_ambience_volume);
     // REGISTER_FUNC(recomp_get_gyro_deltas);
     // REGISTER_FUNC(recomp_get_mouse_deltas);
     REGISTER_FUNC(recomp_run_ui_callbacks);

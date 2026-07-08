@@ -10,6 +10,7 @@
 #include "librecomp/helpers.hpp"
 #include "../patches/input.h"
 #include "../patches/graphics.h"
+#include "../patches/sound.h"
 #include "ultramodern/ultramodern.hpp"
 #include "ultramodern/config.hpp"
 #include "../lib/N64ModernRuntime/thirdparty/xxHash/xxh3.h"
@@ -120,6 +121,14 @@ extern "C" void recomp_get_resolution_scale(uint8_t* rdram, recomp_context* ctx)
     _return(ctx, ultramodern::get_resolution_scale());
 }
 
+extern "C" void recomp_get_music_volume(uint8_t* rdram, recomp_context* ctx) {
+    _return(ctx, harvestmoon64::get_music_volume() / 100.0f);
+}
+
+extern "C" void recomp_get_ambience_volume(uint8_t* rdram, recomp_context* ctx) {
+    _return(ctx, harvestmoon64::get_ambience_volume() / 100.0f);
+}
+
 extern "C" void recomp_get_right_analog_inputs(uint8_t* rdram, recomp_context* ctx) {
     float* x_out = _arg<0, float*>(rdram, ctx);
     float* y_out = _arg<1, float*>(rdram, ctx);
@@ -188,4 +197,3 @@ extern "C" void recomp_xxh3(uint8_t* rdram, recomp_context* ctx) {
     ctx->r2 = (int32_t)(ret >> 32);
     ctx->r3 = (int32_t)(ret >> 0);
 }
-

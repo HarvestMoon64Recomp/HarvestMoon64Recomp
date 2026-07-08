@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 
 #if defined(_WIN32)
 #include <Shlobj.h>
@@ -41,6 +42,35 @@ T get_graphics_config_enum_value(const std::string& option_id) {
 }
 
 static void add_graphics_options(recomp::config::Config &config) {
+}
+
+static void add_sound_options(recomp::config::Config &config) {
+    config.add_percent_number_option(
+        harvestmoon64::configkeys::sound::music_volume,
+        "Music Volume",
+        "Controls background music volume.",
+        100.0f
+    );
+
+    config.add_percent_number_option(
+        harvestmoon64::configkeys::sound::ambience_volume,
+        "Ambience Volume",
+        "Controls ambient/environmental sound volume.",
+        100.0f
+    );
+}
+
+template <typename T = uint32_t>
+T get_sound_config_number_value(const std::string& option_id) {
+    return static_cast<T>(std::get<double>(recompui::config::get_sound_config().get_option_value(option_id)));
+}
+
+int harvestmoon64::get_music_volume() {
+    return std::clamp(get_sound_config_number_value<int>(harvestmoon64::configkeys::sound::music_volume), 0, 100);
+}
+
+int harvestmoon64::get_ambience_volume() {
+    return std::clamp(get_sound_config_number_value<int>(harvestmoon64::configkeys::sound::ambience_volume), 0, 100);
 }
 
 static void set_control_defaults() {
@@ -95,7 +125,8 @@ void harvestmoon64::init_config() {
     set_control_descriptions();
     recompui::config::create_controls_tab();
 
-    recompui::config::create_sound_tab();
+    auto &sound_config = recompui::config::create_sound_tab();
+    add_sound_options(sound_config);
 
     recompui::config::create_mods_tab();
 

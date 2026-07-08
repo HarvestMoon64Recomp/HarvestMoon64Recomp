@@ -11,10 +11,17 @@ namespace harvestmoon64 {
     namespace configkeys {
         namespace general {
         }
+
+        namespace sound {
+            inline const std::string music_volume = "music_volume";
+            inline const std::string ambience_volume = "ambience_volume";
+        }
     }
 
     // TODO: Move loading configs to the runtime once we have a way to allow per-project customization.
     void init_config();
+    int get_music_volume();
+    int get_ambience_volume();
 };
 
 #endif
