@@ -18,8 +18,6 @@
 #define HM64_CHECKERBOARD_WIDESCREEN_OVERLAP_X     14.0f
 #define HM64_HOW_TO_PLAY_CHECKERBOARD_SPRITE        80
 #define HM64_HOW_TO_PLAY_CHECKERBOARD_WIDESCREEN_OVERLAP_X 14.0f
-#define HM64_CORE_MAP_OBJECT_MATRIX_GROUP_ID_BASE  0x484D6F00
-#define HM64_GLOBAL_SPRITE_MATRIX_GROUP_ID_BASE     0x484D7300
 #define HM64_ELLEN_DEATH_CUTSCENE                  416
 #define HM64_ELLEN_DEATH_WHITE_FADE_SPRITE         160
 
@@ -289,7 +287,8 @@ RECOMP_PATCH void setBitmapFromSpriteObject(u16 spriteIndex, AnimationFrameMetad
         }
 
         if (!(globalSprites[spriteIndex].stateFlags & SPRITE_NO_TRANSFORM)) {
-            hm64_bitmapMatrixGroupId[bitmapIndex] = HM64_GLOBAL_SPRITE_MATRIX_GROUP_ID_BASE + ((u32)spriteIndex << 8) + i;
+            // 0x484D7300: global-sprite interpolation IDs, with 256 bitmap slots per sprite.
+            hm64_bitmapMatrixGroupId[bitmapIndex] = 0x484D7300 + ((u32)spriteIndex << 8) + i;
         }
 
         // @recomp don't interpolate bitmaps.
@@ -407,7 +406,11 @@ RECOMP_PATCH Gfx* generateBitmapDisplayList(Gfx* dl, BitmapObject* bitmap, u16 s
         gEXMatrixGroupNoInterpolate(dl, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
         dl += 2;
     } else if (matrixGroupId) {
-        gEXMatrixGroupDecomposedVertsSkipOrderAuto(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
+        gEXMatrixGroupDecomposed(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW,
+            G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, // position, rotation, scale
+            G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, // skew, perspective
+            G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE, // vertices, tiles
+            G_EX_ORDER_AUTO, G_EX_EDIT_NONE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP);
         dl += 2;
     }
 
@@ -573,14 +576,12 @@ RECOMP_PATCH void setupCoreMapObjectSprites(MainMap* mainMap) {
     u16 bitmapIndex;
     u8* texturePtr;
     u16* palettePtr;
-    u32 matrixGroupMapBase;
     u8 total;
     u16 i;
     u16 j;
     u16 k;
 
     i = 0;
-    matrixGroupMapBase = HM64_CORE_MAP_OBJECT_MATRIX_GROUP_ID_BASE ^ ((u32)mainMap->coreMapObjectsTextures & 0x00FFFF00);
 
     while (i < mainMap->mapState.coreMapObjectsCount) {
         j = 0;
@@ -684,7 +685,13 @@ RECOMP_PATCH void setupCoreMapObjectSprites(MainMap* mainMap) {
                 if (bitmapIndex == 0xFFFF) {
                     return;
                 }
-                hm64_bitmapMatrixGroupId[bitmapIndex] = matrixGroupMapBase + (((u32)i) << 8) + j;
+                // @recomp Camera offsets are baked into scenery transforms, so keep
+                // transform interpolation; generateBitmapDisplayList skips vertices.
+                // 0x484D6F00: scenery interpolation IDs, combined with the map texture
+                // address, object type, and instance to distinguish each bitmap.
+                hm64_bitmapMatrixGroupId[bitmapIndex] =
+                    (0x484D6F00 ^ ((u32)mainMap->coreMapObjectsTextures & 0x00FFFF00)) +
+                    (((u32)i) << 8) + j;
 
                 setBitmapViewSpacePosition(bitmapIndex, xPosition, yPosition, zPosition);
                 setBitmapRotation(bitmapIndex, rotationX, rotationY, rotationZ);

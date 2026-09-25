@@ -11,8 +11,6 @@
 // need headroom.
 #define HM64_BIG_MAP_DL_SIZE 64000
 #define HM64_BIG_TILE_VTX_SIZE 49152
-#define HM64_MAP_MATRIX_GROUP_ID_BASE 0x484D6400
-#define HM64_GROUND_OBJECT_MATRIX_GROUP_ID_BASE 0x484E4000
 
 static Gfx hm64_bigMapDisplayList[2][HM64_BIG_MAP_DL_SIZE];
 static Vtx hm64_bigTileVertices[2][HM64_BIG_TILE_VTX_SIZE];
@@ -24,11 +22,10 @@ extern void setupCoreMapObjectSprites(MainMap* map);
 extern void setupMapObjectSprites(MainMap* map);
 extern void setupWeatherSprites(MainMap* map);
 
-extern Gfx groundObjectBitmapsDisplayList[2][0x1000];
 extern Vtx groundObjectVertices[2][320][4];
 extern u8 gridIndexToTileIndexX[20 * 24];
 extern u8 gridIndexToTileIndexZ[20 * 24];
-static u16 hm64_groundObjectRenderOccurrence[MAX_GROUND_OBJECTS];
+static u16 hm64_groundObjectNextGrid[MAX_GROUND_OBJECTS];
 
 RECOMP_PATCH bool checkTileVisible(MainMap* map, u8 x, u8 z) {
     (void)map;
@@ -106,37 +103,22 @@ RECOMP_PATCH Gfx* appendTileToDL(Gfx* dl, MainMap* map, u16 tileIndex, f32 x, f3
     return dl;
 }
 
-static bool has_active_one_shot_map_addition(MainMap* map) {
-    for (u16 i = 0; i < MAX_MAP_ADDITIONS; i++) {
-        u16 flags = map->mapAdditions[i].flags;
-        if ((flags & MAP_ADDITION_ACTIVE) && !(flags & MAP_ADDITION_LOOPING)) {
-            return TRUE;
-        }
-    }
-
-    return FALSE;
-}
-
 RECOMP_PATCH Gfx* buildMapDisplayList(Gfx* dl, MainMap* map, u16 startingVertex) {
-    u32 mapIndex = (u32)(map - mainMap);
-    u32 mapMatrixGroupId = HM64_MAP_MATRIX_GROUP_ID_BASE + mapIndex;
     u32 cellCount = (u32)map->mapGrid.mapWidth * (u32)map->mapGrid.mapHeight;
     Gfx* dlEnd = &hm64_bigMapDisplayList[gGraphicsBufferIndex][HM64_BIG_MAP_DL_SIZE];
     u32 gridIndex;
     u16 lastTexSlot = 0xFFFF;
-    bool snapGround;
+    u32 matrixGroupId = 0x484D6400 + (u32)(map - mainMap);
 
     map->mapState.renderedVertexCount = 0;
     map->mapState.startingVertex = startingVertex;
 
-// @recomp Snap one-shot tile swaps
-    snapGround = has_active_one_shot_map_addition(map);
-
-    if (snapGround) {
-        gEXMatrixGroupDecomposedVertsTilesSkipOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
-    } else {
-        gEXMatrixGroupDecomposedVertsOrderAuto(dl, mapMatrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
-    }
+    // @recomp Interpolate map's transforms but not the vertices
+    gEXMatrixGroupDecomposed(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW,
+        G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, // position, rotation, scale
+        G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, // skew, perspective
+        G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, // vertices, tiles
+        G_EX_ORDER_AUTO, G_EX_EDIT_NONE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP);
     dl += 2;
 
     gDPSetCombineMode(dl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
@@ -200,42 +182,39 @@ RECOMP_PATCH void processMapSceneNode(u16 mapIndex, Gfx* dl) {
                          mainMap[mapIndex].mapGlobals.rotation.z);
 }
 RECOMP_PATCH Gfx* renderGroundObject(Gfx* dl, MainMap* map, GroundObjectBitmap* bitmap, u16 vtxIndex) {
-    Gfx tempDl[2];
     u16 typeIndex = (u16)(bitmap - map->groundObjectBitmaps);
-    u32 matrixGroupId = 0;
-    Gfx* dlEnd = &groundObjectBitmapsDisplayList[gGraphicsBufferIndex][0x1000];
+    u16 gridIndex;
 
+    // @recomp Don't scan through each individual object because that adds lag. Instead look through the lists as a whole
     if (vtxIndex == 0) {
-        for (u16 j = 0; j < MAX_GROUND_OBJECTS; j++) {
-            hm64_groundObjectRenderOccurrence[j] = 0;
+        for (u16 i = 0; i < MAX_GROUND_OBJECTS; i++) {
+            hm64_groundObjectNextGrid[i] = map->groundObjects.spriteIndexToGrid[i];
         }
     }
-
-    if (dl + 16 < dlEnd) {
-        u16 gridIndex = map->groundObjects.spriteIndexToGrid[typeIndex];
-        u16 target = hm64_groundObjectRenderOccurrence[typeIndex];
-        u16 seen = 0;
-
-        while (gridIndex != 0xFFFF) {
-            if (map->visibilityGrid[gridIndexToTileIndexZ[gridIndex] + map->groundObjects.z][gridIndexToTileIndexX[gridIndex] + map->groundObjects.x]) {
-                if (seen == target) {
-                    matrixGroupId = HM64_GROUND_OBJECT_MATRIX_GROUP_ID_BASE + gridIndex;
-                    break;
-                }
-                seen++;
-            }
-            gridIndex = map->groundObjects.nextGridToSpriteIndex[gridIndex];
-        }
+    gridIndex = hm64_groundObjectNextGrid[typeIndex];
+    while (gridIndex != 0xFFFF &&
+           !map->visibilityGrid[gridIndexToTileIndexZ[gridIndex] + map->groundObjects.z]
+                               [gridIndexToTileIndexX[gridIndex] + map->groundObjects.x]) {
+        gridIndex = map->groundObjects.nextGridToSpriteIndex[gridIndex];
     }
 
-    hm64_groundObjectRenderOccurrence[typeIndex]++;
-
-    if (matrixGroupId) {
-        gEXMatrixGroupDecomposedVertsSkipOrderAuto(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
-        dl += 2;
+    if (gridIndex != 0xFFFF) {
+        u32 matrixGroupId = 0x484E4000 +
+                            (u32)(map - mainMap) * 512 + gridIndex;
+        hm64_groundObjectNextGrid[typeIndex] = map->groundObjects.nextGridToSpriteIndex[gridIndex];
+        // @recomp Objects also carry camera motion in their individual transforms.
+        gEXMatrixGroupDecomposed(dl, matrixGroupId, G_EX_PUSH, G_MTX_MODELVIEW,
+            G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, // position, rotation, scale
+            G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, // skew, perspective
+            G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE, // vertices, tiles
+            G_EX_ORDER_AUTO, G_EX_EDIT_NONE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP);
+    } else {
+        hm64_groundObjectNextGrid[typeIndex] = 0xFFFF;
+        gEXMatrixGroupNoInterpolate(dl, G_EX_PUSH, G_MTX_MODELVIEW, G_EX_EDIT_NONE);
     }
+    dl += 2;
 
-    setupBitmapVertices(&groundObjectVertices[gGraphicsBufferIndex][vtxIndex],
+    setupBitmapVertices(groundObjectVertices[gGraphicsBufferIndex][vtxIndex],
         bitmap->width,
         bitmap->height,
         bitmap->height,
@@ -250,17 +229,12 @@ RECOMP_PATCH Gfx* renderGroundObject(Gfx* dl, MainMap* map, GroundObjectBitmap* 
         map->mapGlobals.currentRGBA.b,
         map->mapGlobals.currentRGBA.a);
 
-    // FIXME: might be a wrapper around gSPVertex (kept as-is from the original decomp)
-    gSPVertex(&tempDl[1], &groundObjectVertices[gGraphicsBufferIndex][vtxIndex][0], 4, 0);
-    *tempDl = *(tempDl + 1);
-    *dl++ = *tempDl;
+    gSPVertex(dl++, groundObjectVertices[gGraphicsBufferIndex][vtxIndex], 4, 0);
 
     gSP2Triangles(dl++, 0, 1, 2, 0, 0, 2, 3, 0);
     gDPPipeSync(dl++);
 
-    if (matrixGroupId) {
-        gEXPopMatrixGroup(dl++, G_MTX_MODELVIEW);
-    }
+    gEXPopMatrixGroup(dl++, G_MTX_MODELVIEW);
     gSPEndDisplayList(dl++);
 
     return dl;
