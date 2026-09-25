@@ -1,5 +1,6 @@
 {
   "id": "io.github.harvestmoon64recomp.harvestmoon64recomp",
+  "command": "HarvestMoon64Recompiled",
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
