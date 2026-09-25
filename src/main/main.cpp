@@ -171,7 +171,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
         exit_error("Failed to create window: %s\n", SDL_GetError());
     }
 
-    SDL_SetWindowTitle(window, " ");
+    SDL_SetWindowTitle(window, "Harvest Moon 64: Recompiled");
 
     SDL_SysWMinfo wmInfo;
     SDL_VERSION(&wmInfo.version);
