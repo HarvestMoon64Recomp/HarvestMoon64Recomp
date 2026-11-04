@@ -91,7 +91,6 @@ Yes, if you place a file named `portable.txt` in the same folder as the executab
 Building is not required to play this project, as prebuilt binaries (which do not contain game assets) can be found in the [Releases](https://github.com/HarvestMoon64Recomp/HarvestMoon64Recomp/releases/) section. Instructions on how to build this project can be found in the [BUILDING.md](BUILDING.md) file.
 
 ## Libraries Used and Projects Referenced
-## Libraries Used and Projects Referenced
 * [N64Recomp](https://github.com/N64Recomp/N64Recomp) for statically recompiling the game's code to run natively
 * [RT64](https://github.com/rt64/rt64) for the project's rendering engine
 * [N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime) for replacing the original N64 runtime libraries and providing mod support
